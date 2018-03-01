@@ -173,7 +173,7 @@ def classify_lso(pe, stag, setup, oversample=False, show=True):
 
     #storers for scores
     scores = []; predicts = []; f1 = []; acc =[]; features=[]
-
+    print scores 
     for train_idx, test_idx in kf.split(pe, stag):
         X = np.concatenate([pe[i].transpose() for i in train_idx], 0)
         y = np.concatenate([stag[i]['numeric'] for i in train_idx], 0)
