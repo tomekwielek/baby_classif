@@ -8,8 +8,8 @@ def read_raw(setup, sheet):
     from functional import map_stag_with_raw, my_rename_col
     from config import raw_path, stag_fname, mysave, pe_par
 
-    raw_fnames_ = sorted(np.array(filter(lambda x: x.endswith('.edf'), os.listdir(raw_path))))
-    raw_fnames = [i.split('.edf')[0] for i in raw_fnames_] #dlete .edf from fname
+    fnames_ = sorted(np.array(filter(lambda x: x.endswith('.edf'), os.listdir(raw_path))))
+    fnames = [i.split('.edf')[0] for i in fnames_] #dlete .edf from fname
 
     s = pd.read_excel(stag_fname, sheetname = sheet)
     s = my_rename_col(s)
@@ -70,7 +70,7 @@ def read_raw(setup, sheet):
         stag['numeric'] = stag.replace(stages_coding, inplace=False).astype(float)
         return stag
 
-    idfs = map_stag_with_raw(raw_fnames, s)
+    idfs = map_stag_with_raw(fnames, s, sufx='ref100')
     idfs = {i : v for i, v in idfs.items() if len(v) >= 1} # drop empty
     idfs = {i : v for i, v in idfs.items() if 'P' not in i} # drop Prechtls
     ''' select single subject

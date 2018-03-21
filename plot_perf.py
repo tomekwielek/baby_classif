@@ -4,41 +4,48 @@ import seaborn as sns
 import pickle
 import numpy as np
 path = 'H:\\BABY\\results\\perf_raw\\'
-perf1 = pickle.load(open(path+'perf_t1.txt', 'rb'))
-perf2 = pickle.load(open(path+'perf_t2.txt', 'rb'))
-perf_dummy1 = pickle.load(open(path+'perf_dummy_t1.txt', 'rb'))
-perf_dummy2 = pickle.load(open(path+'perf_dummy_t2.txt', 'rb'))
+perf1 = pickle.load(open(path+'scores_t1_t1m3_fw_kfold2.txt', 'rb'))
+perf2 = pickle.load(open(path+'scores_t2_t1m3_fw_kfold2.txt', 'rb'))
+f1s_each = pickle.load(open(path+'f1s_each_t2.txt', 'rb'))
 
-def get_df(dict_):
-    df1_ = pd.DataFrame({'corr': dict_.values()[0]})
-    df2_ = pd.DataFrame({'uncorr':dict_.values()[1]})
-    df = pd.concat([df1_, df2_], ignore_index=False,axis=1 )
-    df =  df.melt(value_vars =['corr', 'uncorr'], var_name='if_corr')
+def melt_perfs(perf1, perf2):
+    df1 = pd.DataFrame(dict([(key, perf1[key]) for key in ['pval', 'scores']]))
+    df1['time'] = [1] * len(df1)
+    df2 = pd.DataFrame(dict([(key, perf2[key]) for key in ['pval', 'scores']]))
+    df2['time'] = [2] * len(df2)
+    df = pd.concat([df1, df2], ignore_index=False,axis=0 )
     return df
 
-df1 = get_df(perf1)
-df2 = get_df(perf2)
-df1['time'] = ['t1'] * len(df1)
-df2['time'] = ['t2'] * len(df2)
+df = melt_perfs(perf1, perf2)
+h0_1 = perf1['h0']
+h0_2 = perf2['h0']
 
-df_dummy1 = get_df(perf_dummy1)
-df_dummy2 = get_df(perf_dummy2)
+fig, axes = plt.subplots(2,1, sharex= True)
+sc1 = np.asarray(perf1['scores']).mean()
+sns.distplot(h0_1, ax = axes[0])
+axes[0].axvline(x = sc1, c='red', linewidth='4')
+axes[0].set_ylabel('Density')
+axes[0].text(sc1-.055, 6.7, 'p=ns.' %perf1['pval'], bbox=dict(facecolor='red', alpha=0.5))
+axes[0].set_ylim([0,10])
+axes[0].set_title('time1'.upper())
 
-def get_box(my_df, my_dummy_df, ax, t):
-    sns.boxplot(my_df['if_corr'], my_df['value'], ax = ax)
-    sns.stripplot(my_df['if_corr'], my_df['value'], jitter=True, color='black', ax=ax)
-    x_ = np.unique(my_dummy_df['if_corr'])
-    median = my_dummy_df.groupby('if_corr').median().values
-    ax.plot( median, 'r*', markersize=8 )
-    ax.set_ylabel('Accuracy [%]')
-    ax.set_title(t)
-    plt.show()
-fig, ax = plt.subplots(1,2, sharey= True)
-subtit = ['t1', 't2']
-for d, dm, ax_, t in zip([df1, df2], [df_dummy1, df_dummy2], ax, subtit):
-    get_box(d, dm, ax_, t)
+sc2 = np.asarray(perf2['scores']).mean()
+sns.distplot(h0_2, ax = axes[1])
+axes[1].axvline(x = sc2, c='red', linewidth='4')
+axes[1].set_ylabel('Density')
+axes[1].set_xlabel('Classification performance [F1-score]')
+axes[1].text(sc2+.01, 6.7, 'p=%.3f' %perf2['pval'], bbox=dict(facecolor='red', alpha=0.5))
+axes[1].set_ylim([0,10])
+axes[1].set_title('time2'.upper())
 
-
-#plot t1, t2 and corr, uncorr
-df12 = pd.concat([df1, df2], ignore_index=True)
-sns.factorplot(x='if_corr', hue='time', y='value', data=df12,ci=95, kind='point')
+'''
+Plot f1 score for each sleep stage (averaged across subjects)
+'''
+def plot_f1s_each(d):
+    df =pd.DataFrame(f1s_each)
+    df = df.melt()
+    fig, ax = plt.subplots()
+    sns.barplot(x='variable', y='value', estimator=mean, data=df, ci='sd', ax=ax)
+    ax.set_xticklabels(['NREM', 'REM', 'WAKE'])
+    ax.set_xlabel('stage')
+    ax.set_ylabel('Classification performance [F1-score]')

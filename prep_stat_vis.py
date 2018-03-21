@@ -4,7 +4,7 @@ from config import raw_path, myload, base_path
 from mne import io
 from mne import EpochsArray, EvokedArray
 from matplotlib import pyplot as plt
-from functional import (load_single_append, select_stages_to_classif, merge_stages,
+from functional import (load_single_append, select_class_to_classif, merge_stages,
                          count_stag)
 import pandas as pd
 import numpy as np
@@ -21,7 +21,7 @@ merge = False
 
 def get_data_wrap(fnames, merge):
     pe, stag, sbj_names = load_single_append(base_path, fnames, typ = setup)
-    pe, stag = select_stages_to_classif(pe, stag, sel_idxs=sel_idxs)
+    pe, stag = select_class_to_classif(pe, stag, sel_idxs=sel_idxs)
     if merge:
         stag_m = [stag[i].iloc[:,[0]].replace(mapper, inplace=False).astype(float) \
             for i in range(len(stag))]
@@ -75,20 +75,18 @@ def prepare_data(pe, stag):
 
     av['name_id'] = mi_df.loc['name_id'].iloc[0,:]
     av['time_id'] = [av['name_id'].iloc[i][4] for i in range(len(av))]
-    # what stages we have
     #TODO when merge then col names change; condition needed
     if merge:
         uniq_stag = map(lambda x: x.iloc[:,0].unique().tolist(), stag)
     else:
         uniq_stag = map(lambda x: x.iloc[:,1].unique().tolist(), stag)
+    # what stages we have
     uniq_stag = unique(reduce(lambda x,y: x+y, uniq_stag))
     uniq_stag = [str(int(s)) for s in uniq_stag]
     av_melt = pd.melt(av, value_vars = uniq_stag, id_vars='time_id', var_name='stag')
-    av_melt.dropna(inplace = True)
+    #av_melt.dropna(inplace = True)
     return av, av_melt
 
-av, av_melt, = prepare_data(peall, stagall)
-av_melt['value'] = pd.to_numeric(av_melt['value'])# get numerc type
 '''plot distibutin, normal check'''
 def plot_descriptive(av, uniq_stag, count):
     import seaborn as sns
@@ -104,12 +102,17 @@ def plot_descriptive(av, uniq_stag, count):
         sm.qqplot(d, ax = axes[2])
     plt.suptitle('')
     plt.show()
-#plot_descriptive(av, uniq_stag, count)
+
+av, av_melt, = prepare_data(peall, stagall)
+av_melt['value'] = pd.to_numeric(av_melt['value'])# get numerc type
+#save melted df
+pd.to_pickle(av_melt, 'df_long.txt')
+pd.to_pickle(av, 'df.txt')
 
 sns.factorplot(x='stag', hue='time_id', y='value', data=av_melt,ci=95, kind='point')
 sns.factorplot(x='stag', hue='time_id', y='value', data=av_melt,ci=95, kind='strip')
 
-av_melt.groupby(['time_id', 'stag'])
+
 '''
 import scipy.stats as stats
 #paired t test
@@ -119,39 +122,4 @@ t2 = np.asarray(av_melt['value'][av_melt['time_id'] == '2'])
 stats.ttest_ind(t1,t2)
 #stats.ttest_1samp(t1-t2, popmean=0) #another option
 stats.ttest_ind(t1, t2)
-'''
-
-
-# ANOVA & posthoc
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
-import statsmodels.stats.multicomp as multi
-formula = 'value ~ C(stag) + C(time_id) + C(stag):C(time_id)'
-mod =  ols(formula, av_melt).fit()
-
-aov_table = sm.stats.anova_lm(mod, typ=2)
-print aov_table
-
-#pairwise posthoc
-mc1=multi.MultiComparison(av_melt['value'],av_melt['stag'])
-res1=mc1.tukeyhsd()
-print res1.summary()
-
-
-
-
-'''
-from statsmodels.stats.anova import AnovaRM
-from statsmodels.stats.multicomp import (pairwise_tukeyhsd,
-                                         MultiComparison)
-
-anova = AnovaRM(av, depvar='value', subject='id', within=['stag'])
-fit = anova.fit()
-fit.summary()
-
-mc = MultiComparison(av['value'], av['stag'])
-results = mc.tukeyhsd()
-results.plot_simultaneous()
-print results
-print mc.groupsunique
 '''
