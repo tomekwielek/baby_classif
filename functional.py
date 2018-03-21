@@ -287,7 +287,7 @@ def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
     '''classify using leave_sbj_out; test on single left out as well as
     single left out from the second recording time (fnames2)'''
     clf = make_pipeline(MinMaxScaler(), svm.SVC(C=1, kernel='linear',
-                        probability=True))
+                        probability=False))
 
     pe1, pe2, stag1, stag2 = align_t1_t2_data(pe1, pe2, stag1, stag2)
 
