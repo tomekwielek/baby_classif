@@ -17,7 +17,7 @@ sel_idxs = [1, 2, 3]
 merge = False
 
 def get_data_wrap(fnames, setup, merge=False):
-    pe, stag, sbj_names = load_single_append(base_path, fnames, typ = setup)
+    pe, stag, sbj_names, _ = load_single_append(base_path, fnames, typ = setup)
     pe, stag = select_class_to_classif(pe, stag, sel_idxs=sel_idxs)
     if merge:
         stag = merge_stages(stag, mapper) #merge stages; typicaly N and R
@@ -69,7 +69,7 @@ g.map(plt.hist, 'stag', color='steelblue', bins=bins, normed=False, ec='black')
 get indiv. count of stages
 '''
 def get_indiv_stag(this_df):
-    nms_ = unique([this_df['name'].iloc[i][:] for i in range(len(this_df))])
+    nms_ = np.unique([this_df['name'].iloc[i][:] for i in range(len(this_df))])
     count_store = []
     for n in nms_:
         count_ = this_df[['name', 'stag']][this_df['name']==n].groupby(['stag']).count()
@@ -88,11 +88,11 @@ d_uncorr['time'] = [d_uncorr['name'].iloc[i][4] for i in range(len(d_uncorr))]
 
 
 
-def test_N2_counts():
+def test_REM_counts(data):
     from scipy import stats
     from collections import Counter
-    d_corr = d_corr.fillna(0)
-    d2 = d_corr[[2, 'name_short', 'time']]
+    data = data.fillna(0)
+    d2 = data[[2, 'name_short', 'time']] #get REM only
     uniqe_ = np.unique(d2['name_short'])
     count_times = Counter(d2['name_short']).items()
     #find names that apear twice : t1 and t2

@@ -1,23 +1,22 @@
-import xlsxwriter
+def mywriter(data, save_name):
+    import xlsxwriter
+    workbook = xlsxwriter.Workbook(save_name)
+    worksheet = workbook.add_worksheet()
+    save_name = save_name + '.xlsx'
+    row = 0
+    col = 0
 
-workbook = xlsxwriter.Workbook('write_data.xlsx')
-worksheet = workbook.add_worksheet()
-
-
-row = 0
-col = 0
-
-idfs = names #change
-for key in idfs.keys():
-    row += 1
-    worksheet.write(row, col, key)
-    for item in idfs[key]:
-        worksheet.write(row, col + 1, item)
+    for key in data.keys():
         row += 1
-workbook.close()
+        worksheet.write(row, col, key)
+        for item in data[key]:
+            worksheet.write(row, col + 1, item)
+            #row += 1
+    workbook.close()
 
 
-for item in names:
-    worksheet.write(0, col, item)
-    col += 1
-workbook.close()
+    for item in data:
+        worksheet.write(0, col, item)
+        col += 1
+    workbook.close()
+    return

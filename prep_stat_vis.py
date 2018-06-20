@@ -20,14 +20,18 @@ sel_idxs = [1, 2, 3]
 merge = False
 
 def get_data_wrap(fnames, merge):
-    pe, stag, sbj_names = load_single_append(base_path, fnames, typ = setup)
+    freqs = None
+    if setup != 'psd': # if setup refers to some pe-s
+        pe, stag, sbj_names, _ = load_single_append(base_path, fnames, typ = setup)
+    elif setup == 'psd':
+        pe, stag, sbj_names, freqs = load_single_append(base_path, fnames, typ = setup)
     pe, stag = select_class_to_classif(pe, stag, sel_idxs=sel_idxs)
     if merge:
         stag_m = [stag[i].iloc[:,[0]].replace(mapper, inplace=False).astype(float) \
             for i in range(len(stag))]
     elif merge == False:
         stag_m = stag
-    return pe, stag_m, sbj_names
+    return pe, stag_m, sbj_names, freqs
 
 def plot_mytopomap(pe, indiv_stag):
     raw = io.read_raw_edf(raw_path + '104_2_correctFilter_2heogs_ref100.edf',
@@ -52,13 +56,14 @@ def pe_for_indiv_stag(pe, stag, sel_idxs):
         #get list of pe-s for given stag
         array_ = [pe[i][:, np.where(stag[i] == idx)[0]] for i in range(len(stag))]
         indiv_['array_', str(idx), ] = array_
-        indiv_['av', str(idx)] = [np.mean(array_[i]) for i in range(len(stag))]
+        indiv_['av', str(idx)] = [np.mean(array_[i]) for i in range(len(stag))] #av epochs AND chns
         indiv_['std', str(idx)] = [np.std(array_[i]) for i in range(len(stag))]
         indiv_['name_id', str(idx)]  = [stag[i].columns[0] for i in range(len(stag))]
+        indiv_['avchs', str(idx)] = [np.mean(array_[i],0) for i in range(len(stag))]
     return indiv_
 #load data, merge stages (e.g 1 and 2 as single sleep) for merge ==True
-pe1, stag1, sbj_names1 = get_data_wrap(fnames1, merge=merge)
-pe2, stag2, sbj_names2 = get_data_wrap(fnames2, merge=merge)
+pe1, stag1, sbj_names1, _ = get_data_wrap(fnames1, merge=merge)
+pe2, stag2, sbj_names2, _ = get_data_wrap(fnames2, merge=merge)
 if merge: #update sel_idxs if stages were merged
     sel_idxs = list(unique(mapper.values()))
 
@@ -81,9 +86,13 @@ def prepare_data(pe, stag):
     else:
         uniq_stag = map(lambda x: x.iloc[:,1].unique().tolist(), stag)
     # what stages we have
-    uniq_stag = unique(reduce(lambda x,y: x+y, uniq_stag))
+    uniq_stag = np.unique(reduce(lambda x,y: x+y, uniq_stag))
     uniq_stag = [str(int(s)) for s in uniq_stag]
-    av_melt = pd.melt(av, value_vars = uniq_stag, id_vars='time_id', var_name='stag')
+    av_melt_with_time_id = pd.melt(av, value_vars = uniq_stag, id_vars='time_id', var_name='stag')
+    av_melt_with_name_id = pd.melt(av, value_vars = uniq_stag, id_vars='name_id', var_name='stag')
+    av_melt = pd.concat([av_melt_with_time_id, av_melt_with_name_id], axis=1, join='inner')
+    av_melt = av_melt.loc[:,~av_melt.columns.duplicated()] #drop duplicated columns
+    av_melt['name_id_short'] =  [av_melt['name_id'].iloc[i][0:3] for i in range(len(av_melt))]
     #av_melt.dropna(inplace = True)
     return av, av_melt
 
@@ -103,23 +112,64 @@ def plot_descriptive(av, uniq_stag, count):
     plt.suptitle('')
     plt.show()
 
-av, av_melt, = prepare_data(peall, stagall)
-av_melt['value'] = pd.to_numeric(av_melt['value'])# get numerc type
-#save melted df
-pd.to_pickle(av_melt, 'df_long.txt')
-pd.to_pickle(av, 'df.txt')
+#av, av_melt, = prepare_data(peall, stagall)
+#av_melt['value'] = pd.to_numeric(av_melt['value'])# get numerc type
 
-sns.factorplot(x='stag', hue='time_id', y='value', data=av_melt,ci=95, kind='point')
-sns.factorplot(x='stag', hue='time_id', y='value', data=av_melt,ci=95, kind='strip')
+#av.to_csv('df_w.csv')
 
+#sns.factorplot(x='stag', hue='time_id', y='value', data=av_melt,ci=95, kind='point')
+#sns.factorplot(x='stag', hue='time_id', y='value', data=av_melt,ci=95, kind='strip')
+#plt.show()
 
 '''
-import scipy.stats as stats
-#paired t test
-t1 = np.asarray(av_melt['value'][ av_melt['time_id']=='1' |
-                                 av_melt['stag'] =='1' ])
-t2 = np.asarray(av_melt['value'][av_melt['time_id'] == '2'])
-stats.ttest_ind(t1,t2)
-#stats.ttest_1samp(t1-t2, popmean=0) #another option
-stats.ttest_ind(t1, t2)
+# NO averaging over epochs
+mydict = pe_for_indiv_stag(peall, stagall, sel_idxs) #nested dict storing array, av ,std
+avchs = {key : value for key, value in mydict.iteritems() if 'avchs' in key} #select only avs over chs
+names =  {key : value for key, value in mydict.iteritems() if 'name_id' in key} #select only name_id
+t_ = names.copy()
+avchs.update(t_) #merge dicts
+del t_
+
+midf = pd.DataFrame(avchs).transpose() #get MultiIndex-ed df
+df = pd.DataFrame(midf.loc['avchs'].transpose())
+#df = pd.DataFrame(midf.loc['avchs'])
+df['name_id'] = midf.loc['name_id'].iloc[0,:]
+df['time_id'] = [df['name_id'].iloc[i][4] for i in range(len(df))]
+
+uniq_stag = map(lambda x: x.iloc[:,1].unique().tolist(), stagall)
+uniq_stag = np.unique(reduce(lambda x,y: x+y, uniq_stag))
+uniq_stag = [str(int(s)) for s in uniq_stag]
+df_melt_with_time_id = pd.melt(df, value_vars = uniq_stag, id_vars='time_id', var_name='stag')
+df_melt_with_name_id = pd.melt(df, value_vars = uniq_stag, id_vars='name_id', var_name='stag')
+df_melt = pd.concat([df_melt_with_time_id, df_melt_with_name_id], axis=1, join='inner')
+df_melt = df_melt.loc[:,~df_melt.columns.duplicated()] #drop duplicated columns
+df_melt['name_id_short'] =  [df_melt['name_id'].iloc[i][0:3] for i in range(len(df_melt))]
 '''
+
+#create long format for pe avergaed  across channels AND k number of randomly sampled epochs
+def pe_stag_time_names(pe, stag, sel_idxs):
+    k = 5 #sample size of sample epochs
+    pes, ss, time_id, name_id, name_id_short = [[] for i in range(5)]
+    for idx in sel_idxs:
+        pes_ = pe[:, np.where(stag == idx)[0]].mean(0) #av channels
+        nb_repl = len(pes_)
+        if nb_repl >= k:
+            pes_ = np.random.choice(pes_, size=k, replace=False)
+        elif nb_repl == 0:
+            pes_ = np.nan
+        pes.append(np.nanmean(pes_))
+        ss.append(idx)
+        time_id.append(stag.columns[0][4])
+        name_id.append(stag.columns[0])
+        name_id_short.append(stag.columns[0][0:3])
+
+    mydict = {'value':pes,
+            'stag':np.hstack(ss), 'time_id':np.hstack(time_id), \
+            'name_id':np.hstack(name_id), 'name_id_short':np.hstack(name_id_short)}
+    df = pd.DataFrame(mydict)
+    return df
+
+list_dfs = [pe_stag_time_names(peall[i], stagall[i], sel_idxs) for i in range(len(peall))]
+
+df = pd.concat(list_dfs)
+df.to_csv('df_l_eps.csv')

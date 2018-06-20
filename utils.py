@@ -1,42 +1,29 @@
-from config import raw_path
-import os
-from mne import io
-import re
+def av_stag_pe_against_beh():
+    #get average pe for NREM
+    nrem1 = [pe1[i].mean(0)[stag1[i]['numeric'] == 1].mean() for i in range(len(pe1))]
+    fn1 = [fnames1[i].split('_')[0] for i in range(len(fnames1))]
+    nrem1 = pd.DataFrame({'id' : fn1, 'nrem_pe' : nrem1})
+    nrem2 = [pe2[i].mean(0)[stag2[i]['numeric'] == 1].mean() for i in range(len(pe2))]
+    fn2 = [fnames2[i].split('_')[0] for i in range(len(fnames2))]
+    nrem2 = pd.DataFrame({'id' : fn2, 'nrem_pe' : nrem2})
 
-fnames = os.listdir(raw_path)
-fnames = sorted(filter(lambda x : x.endswith('_ref100.edf'), fnames))
-chs = []
-for fn in fnames:
-    chs.append(io.read_raw_edf(raw_path+fn, preload=True).info['ch_names'])
+    nrem1_sub = nrem1[nrem1['id'].astype('int').isin(bley['VPN'].astype('int').tolist())]
+    nrem2_sub = nrem2[nrem2['id'].astype('int').isin(bley['VPN'].astype('int').tolist())]
+    bley_sub1 = bley['Unnamed: 3'][bley['VPN'].astype(int).isin(nrem1['id'])]
+    plt.scatter(bley_sub1, nrem1_sub['nrem_pe'])
 
-chs_incl = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4', 'ECG', 'VEOG', 'EMG', 'HEOG_l']
-regexs = [re.compile(chs_incl[i]) for i in range(len(chs_incl))]
+    bley_sub2 = bley['Unnamed: 3'][bley['VPN'].astype(int).isin(nrem2['id'])]
+    plt.scatter(bley_sub2, nrem2_sub['nrem_pe'])
 
-chs_pos = np.zeros((len(chs), len(chs_incl)))#empty arr for storing chs position
-for sbj_id in range(len(chs)): #iterate over sbjs
-    for i in range(len(chs_incl)): #iterate over channels
-        match = np.where([compiled_reg.match(chs[sbj_id][i]) for compiled_reg in regexs])[0]
-        chs_pos[sbj_id, match] = match
-    print chs[sbj_id]
-    print fnames[sbj_id]
-
-zip(range(len(chs)), fnames, [len(chs[i]) for i in range(len(chs))], chs_pos)
-
-        print match
-        #chs_pos[sbj_id, i] = np.where([compiled_reg.search(chs[sbj_id][i]) for compiled_reg in regexs])[0]
-
-
-    if all(compiled_reg.match(chs[i]) for compiled_reg in regexs):
-        print("all matched")
-    else:
-        print '{} does not match'.format(i)
-
-
-any(compiled_reg.match(mystring) for compiled_reg in reg_lst)
-
-
-
-def sort_channels(data_unsorted, ch_names_unsorted):
-    permut = np.array(ch_names_unsorted).argsort()
-    data = data_unsorted[:,permut,:]
-    return data, sorted(ch_names_unsorted)
+    nrem1_sub = nrem1[nrem1['id'].astype('int').isin(ci['VPN'].astype('int').tolist())]
+    ci_sub1 = ci[ci['VPN'].astype(int).isin(nrem1['id'])]
+    nrem2_sub = nrem2[nrem2['id'].astype('int').isin(ci['VPN'].astype('int').tolist())]
+    ci_sub2 = ci['sensitiv'][ci['VPN'].astype(int).isin(nrem2['id'])]
+    fig, ax = plt.subplots()
+    ax.scatter(ci_sub1['sensitiv'], nrem1_sub['nrem_pe'])
+    for i, t in enumerate(ci_sub1['VPN']):
+        ax.annotate(t, (ci_sub1['sensitiv'].iloc[i], \
+                        nrem1_sub['nrem_pe'].iloc[i]))
+    sns.regplot(ci_sub1['sensitiv'], nrem1_sub['nrem_pe'])
+    plt.scatter(ci_sub2, nrem2_sub['nrem_pe'])
+return

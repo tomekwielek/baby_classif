@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-
 from mne import io
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.over_sampling import SMOTE, ADASYN
@@ -18,10 +17,12 @@ from sklearn.ensemble import RandomForestClassifier as rf
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import SelectFromModel
 from sklearn.dummy import DummyClassifier
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import f1_score, accuracy_score, make_scorer
 from collections import Counter
 from sklearn.gaussian_process import GaussianProcessClassifier as GP
 from sklearn.gaussian_process.kernels import RBF
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import SMOTE, ADASYN
 
 from config import (myload, paths, report, raw_path)
 
@@ -87,12 +88,16 @@ def vis_PCA(X,y, sel_idxs):
     plt.show()
 
 
-def plot_pe(pe, stag, axes=None):
+def plot_pe(pe, stag, axes=None, mspe=False):
     '''plot pe for single subject'''
+    from config import chs_incl
     if all(axes == None):
         fig, axes = plt.subplots(2,1)
-    ch_names = io.read_raw_edf(raw_path + '104_2_correctFilter_2heogs_ref100.edf',
-            preload=False).info['ch_names'][:-1]
+    if mspe:
+        ch_names = ['av_channs_taus'] # if mspe is ploted channels and taus are averaged
+        pe = pe.mean(0)
+    else:
+        ch_names = chs_incl
     pe = pe.transpose()
     df = pd.DataFrame(pe, index=range(pe.shape[0]), columns=ch_names)
     df.plot(ax = axes[0])
@@ -114,8 +119,6 @@ def get_PCA_coef(pe,stag):
     coef = pca.components_
     #explained variance
     pca.explained_variance_ratio_.cumsum()
-
-
 
 def vis_clf_probas(pe, stag):
     '''
@@ -144,7 +147,7 @@ def vis_clf_probas(pe, stag):
     classes = np.unique(y_pred)
     classes = [int(i) for i in classes]
 
-    fig, axes = plt.subplots(1, n_classes, figsize = [10,5])
+    fig, axes = plt.subplots(1, n_classes, figsize = [11,6])
     #plt.suptitle('SVM classification and decision boundary')
     mapper = {1. : 'k', 2.: 'g', 3.: 'gold'}
     mapper_stag_name = {1. : 'NREM', 2.: 'REM', 3.: 'WAKE'}
@@ -162,7 +165,7 @@ def vis_clf_probas(pe, stag):
         if idx.any():
             #axes[i].scatter(X[idx, 0], X[idx, 1], marker='o', c='k', alpha=0.5)
             axes[i].scatter(X[idx, 0], X[idx, 1], c=[mapper[i] for i in y[idx]], alpha=.5, s=5)
-    ax = plt.axes([0.15, 0.04, 0.7, 0.05])
+    ax = plt.axes([0.15, 0.24, 0.7, 0.05])
     plt.title("Probability")
     plt.colorbar(imshow_handle, cax=ax, orientation='horizontal')
     markers = [plt.Line2D([0,0],[0,0],color=c, marker='o', linestyle='') for c in mapper.values()]
@@ -170,24 +173,27 @@ def vis_clf_probas(pe, stag):
     ax2.set_xticks([])
     ax2.set_yticks([])
     ax2.set_facecolor('white')
-    plt.legend(markers, mapper_stag_name.values(), loc=2, numpoints=3, title='Ground truth')
+    plt.legend(markers, mapper_stag_name.values(), loc=2, numpoints=3, frameon=False)
+
     plt.show()
 
-def classify_lso(pe, stag, setup, show=True):
+def classify_lso(pe, stag, setup, myshow=True, oversample=False, mysave=False):
     '''classify using leave_sbj_out: single sbj out, optionally oversample'''
     #clf = make_pipeline(StandardScaler(), LogisticRegression(C = 1,
     #                                                        solver='liblinear',
     #                                                        class_weight=None,
     #                                                        multi_class='ovr'))
     clf = make_pipeline(MinMaxScaler(), svm.SVC(C=1, kernel='linear',
-                        probability=True))
+                        probability=False))
     no_sbjs = len(stag)
-    kf = KFold(n_splits = no_sbjs/2)
+    kf = KFold(n_splits = no_sbjs)
     scores, predicts, f1s, accs, features, names, f1s_each =  ([] for i in range(7))
-
+    check_mspe = pe[0][0].shape[0] > 11 #check if pe (then #chans=11) or mspe, for plotting only
     for train_idx, test_idx in kf.split(pe, stag):
         X = np.concatenate([pe[i].transpose() for i in train_idx], 0)
         y = np.concatenate([stag[i]['numeric'] for i in train_idx], 0)
+        if oversample:
+            X, y = RandomOverSampler(random_state=123).fit_sample(X, y)
 
         X_test = np.concatenate([pe[i].transpose() for i in test_idx], 0)
         y_test =  np.concatenate([stag[i]['numeric'] for i in test_idx], 0)
@@ -208,9 +214,12 @@ def classify_lso(pe, stag, setup, show=True):
         f1s.append(f1_); accs.append(acc_); f1s_each.append(f1_each_)
         names.append(sbj_id_)
         print test_idx
-        if show:
+        #if check_mspe: #for mspe average channels and taus
+        #    pe = [pe[i].mean(0) for i in range(len(pe))]
+        if myshow:
             fig, axes = plt.subplots(3,1, sharex = True, figsize = [12,7])
-            plot_pe(pe[test_idx[0]], stag[test_idx[0]], axes = axes[:2])
+            plot_pe(pe[test_idx[0]], stag[test_idx[0]], axes = axes[:2], mspe=check_mspe)
+
             axes[2].plot(pred_, 'bo', label = 'prediction')
             axes[2].set_xlim(0,len(pred_))
             axes[2].set_ylim(0.8,3.2)
@@ -221,19 +230,23 @@ def classify_lso(pe, stag, setup, show=True):
             axes[2].set_xticks(times)
             axes[2].set_xticklabels('time [30s]', fontsize='large')
             f1_str = 'f1=' + str(round(f1_,2))
-            acc_str = 'Accuracy=' + str(round(acc_,3))
-            fig.text(0.05, 0.95, [setup, acc_str], size = 22)
+            #acc_str = 'Accuracy=' + str(round(acc_,3))
+            fig.text(0.05, 0.95, [setup, f1_str], size = 22)
             plt.show()
-            #report.add_figs_to_section(fig, captions='Sbj '+ str(sbj_id_),
-            #                            section= setup)
-    return predicts, scores, report, accs, names, f1s_each
+            report.add_figs_to_section(fig, captions='Sbj '+ str(sbj_id_),
+                                       section= setup)
+        if mysave:
+            from config import mysave
+            typ_name = 'pred'
+            sbj_save = stag[test_idx[0]].columns[0][:5]
+            mysave(var = pred_, typ=typ_name, sbj=sbj_save)
+    return predicts, scores, report, f1s, names, f1s_each
 
 def subject_h0(pe, stag, no_perm):
     '''
     Based on Stelzer(2013). Get single subject chance accuracy estimate by permuting
     stag labeling 'no_perm' times.
     '''
-
     clf = make_pipeline(MinMaxScaler(), svm.SVC(C=1, kernel='linear',probability=False))
     no_sbjs = len(stag)
     kf = KFold(n_splits = no_sbjs/2)
@@ -263,7 +276,7 @@ def subject_h0(pe, stag, no_perm):
         print perm_idx
     return np.asarray(store_sbjs_h0)
 '''
-Based on Stelzer(2013). Get group chance level by randomly selecting one accuract per subjects
+Based on Stelzer(2013). Get group chance level by randomly selecting one accuracy per subjects
 and averging. Repeat 'times' times. p value is calculated by r/times where r is count
 of accuracies grater than the actual accuracy. Notice correct formula acc. [North, 2002] is:
 (r+1)/(times+1)
@@ -286,17 +299,35 @@ def group_h0(pe, stag, my_score, times=10e4):
 def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
     '''classify using leave_sbj_out; test on single left out as well as
     single left out from the second recording time (fnames2)'''
-    clf = make_pipeline(MinMaxScaler(), svm.SVC(C=1, kernel='linear',
-                        probability=False))
+    '''
+    from sklearn.pipeline import Pipeline
+    pipe = Pipeline([('scl', MinMaxScaler()),
+		           ('clf', svm.SVC())])
 
-    pe1, pe2, stag1, stag2 = align_t1_t2_data(pe1, pe2, stag1, stag2)
+    grid_params = [{'clf__kernel': ['linear', 'rbf'],
+		          'clf__C': [0.001, 0.1, 1, 10, 100],
+                  'clf__gamma' : [0.1, 0.01, 0.001, 0.0001]}]
+
+    from sklearn.grid_search import GridSearchCV
+    gs = GridSearchCV(estimator=pipe,
+			param_grid=grid_params,
+			scoring='accuracy',
+            cv=10)
+    '''
+    clf = make_pipeline(StandardScaler(), svm.SVC(C=1., kernel='linear',
+                        probability=False))
+    #clf = make_pipeline(StandardScaler(), LogisticRegression(C=1,
+    #                                                        solver='liblinear',
+    #                                                        class_weight=None,
+    #                                                        multi_class='ovr'))
+    #pe1, pe2, stag1, stag2 = align_t1_t2_data(pe1, pe2, stag1, stag2)
 
     #pe1, pe2, stag1, stag2 = (pe2, pe1, stag2, stag1) #train t1 test t2
     assert len(stag1) == len(stag2)
     no_sbjs = len(stag1)
     kf = KFold(n_splits = no_sbjs)
 
-    predicts1, predicts2, f1_1, f1_2, names1, names2 =  ([] for i in range(6))
+    predicts1, predicts2, f1_1, f1_2, f1_1_NREM, names1, names2 =  ([] for i in range(7))
 
     for train_idx, test_idx in kf.split(pe1, stag1):
         sbj_id_1 = stag1[test_idx[0]].columns[0][:3]
@@ -312,10 +343,12 @@ def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
         y_test2 =  np.concatenate([stag2[i]['numeric'] for i in test_idx], 0)
 
         clf.fit(X, y)
+        #gs.fit(X, y)
         pred_1 = clf.predict(X_test1)
         pred_2 = clf.predict(X_test2)
 
         f1_1_ = f1_score(pred_1, y_test1, average = 'micro')
+        f1_1_NREM_ = f1_score(pred_1, y_test1, labels=[1], average = 'micro')
         f1_2_ = f1_score(pred_2, y_test2, average = 'micro')
 
         predicts1.append((pred_1, y_test1))
@@ -323,7 +356,7 @@ def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
 
         f1_1.append(f1_1_)
         f1_2.append(f1_2_)
-
+        f1_1_NREM.append(f1_1_NREM_)
         names1.append(sbj_id_1)
         names2.append(sbj_id_2)
         if show:
@@ -354,10 +387,14 @@ def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
             axes[5].set_xticklabels('time [30s]', fontsize='large')
             fig.suptitle(sbj_id_)
             fig.text(0.05, 0.95, setup, size = 22)
-            report.add_figs_to_section(fig, captions='Sbj '+ str(sbj_id_),
-                                        section= setup)
+            #report.add_figs_to_section(fig, captions='Sbj '+ str(sbj_id_),
+            #                            section= setup)
+    #print('Best accuracy: %.3f' % gs.best_score_)
 
-    return report, predicts1, predicts2, f1_1, f1_2, names1, names2
+    # Best params
+    #print('\nBest params:\n', gs.best_params_)
+
+    return report, predicts1, predicts2, f1_1, f1_2, f1_1_NREM, names1, names2
 
 
 def align_t1_t2_data(pe1, pe2, stag1, stag2):
@@ -386,32 +423,40 @@ def align_t1_t2_data(pe1, pe2, stag1, stag2):
 def load_single_append(path, fnames, typ):
     '''Load single subjects, drop nan from stag, make pe and stag of equall length
     (differences of 1 due to windowing in pe computaton) and append a list'''
-    stag_list, pe_list, s_list = ([] for i in range(3))
-    if '236_2' in fnames: #stag- and pe- length in '236_2' does not match TODO
-        fnames.remove('236_2')
+    freqs = None
+    stag_list, pe_list, n_list = ([] for i in range(3))
+    #if '236_2' in fnames: #stag- and pe- length in '236_2' does not match TODO
+    #    fnames.remove('236_2')
     for s in fnames:
         #omit if filepath is empty
         if not os.path.isfile(paths(typ=typ, sbj=s)):
             print 'Folder is empty'
             print s
             continue
-        stag, pe = myload(typ=typ, sbj=s)
-        if s in ['110_2']:#see annot by HL in excel; BL shorter
+        if typ == 'psd':
+            stag, pe, freqs = myload(typ=typ, sbj=s) # for psd load freqs bins
+
+        else:
+            stag, pe = myload(typ=typ, sbj=s)
+            #pe = pe[0:10, :] # single sbj has 11 channels, why? TODO
+        if s in ['110_2']: #see annot by HL in excel; BL shorter
             stag = stag.iloc[:66]
+        if s in ['236_2']:
+            stag  = stag[1:] #see annot by HL in excel; BL shorter
         stag = stag.dropna()
-        if len(stag) - pe.shape[1] == 1:#pe can be shorter due to windowing
+        if len(stag) - pe.shape[-1] == 1:#pe can be shorter due to windowing
             stag = stag[:-1]
         else:
              NotImplementedError
         print s
         print len(stag)
         print pe.shape[1]
-        assert len(stag) == pe.shape[1]
+        assert len(stag) == pe.shape[-1]
         stag_list.append(stag)
         pe_list.append(pe)
-        s_list.append(s)
+        n_list.append(s)
 
-    return pe_list, stag_list, s_list
+    return pe_list, stag_list, n_list, freqs
 
 def count_stag(stag):
     no_sbj = len(stag)
@@ -448,3 +493,30 @@ def pandas_count_items(df, var_name, str_length):
     u = [df[var_name].iloc[i][:str_length] for i in range(len(df))]
     c = Counter(u).items()
     return u, c
+
+def order_channels(raw):
+    '''
+    for missing channels add zeros, reorder channels  across subjects
+    '''
+    from config import chs_incl
+    import mne
+    chs = raw.info['ch_names']
+    missing = [ch for ch in chs_incl if ch not in chs]
+    print 'MISSING CHANNELS: %s' %missing
+    # add missing channels as zeros data (!!!)
+    miss_data = np.zeros((len(missing), len(raw.times)))
+    if len(missing) == 1: #single channel is missing
+        miss_info = mne.create_info(missing, raw.info['sfreq'], ['eeg'])
+        miss_raw = mne.io.RawArray(miss_data[0:], miss_info)
+        raw.add_channels([miss_raw], force_update_info=True)
+    elif len(missing) == 2: # two channels are missing
+        miss_info1 = mne.create_info([missing[0]], raw.info['sfreq'], ['eeg'])
+        miss_raw1 = mne.io.RawArray(miss_data[[0],:], miss_info1)
+        miss_info2 = mne.create_info([missing[1]], raw.info['sfreq'], ['eeg'])
+        miss_raw2 = mne.io.RawArray(miss_data[[1],:], miss_info2)
+        raw.add_channels([miss_raw1], force_update_info=True)
+        raw.add_channels([miss_raw2], force_update_info=True)
+
+    raw_ordered = raw.reorder_channels(chs_incl)
+    #raw.save(fname=raw_path+'test'+fn, overwrite=False)
+    return raw_ordered, missing
