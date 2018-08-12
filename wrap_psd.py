@@ -28,7 +28,7 @@ for setup in setups:
     psd1, stag1 = select_class_to_classif(psd1, stag1, sel_idxs=sel_idxs)
     psd2, stag2 = select_class_to_classif(psd2, stag2, sel_idxs=sel_idxs)
 
-    # Relatice power see: Xiao(2018)
+    # Relative power see: Xiao(2018)
     rel_psd1 = [psd1[i] / np.abs(np.sum(psd1[i], 0)) for i in range(len(psd1))]
     rel_psd1 = [ np.log10(rel_psd1[i]) for i in range(len(psd1)) ]
     rel_psd2 = [psd2[i] / np.abs(np.sum(psd2[i], 0)) for i in range(len(psd2))]
@@ -121,7 +121,7 @@ def plot_stages_time_hued(df):
     import seaborn as sns
     fig, axes = plt.subplots(1,3, sharey=True, figsize = (10,5))
     for axi, s in enumerate(['nrem', 'rem', 'wake']):
-        sns.pointplot(x='variable', y = 'value', hue='time', sd=95, join=True, scale=0.5,units ='stag',\
+        sns.pointplot(x='variable', y = 'value', hue='time', ci=95, join=True, scale=0.5,units ='stag',\
                         data=df[df['stag']==s], ax = axes[axi], n_boot=1000,capsize =1.4, errwidth =.8, \
                         palette = sns.color_palette('Dark2'))
         old_ticks = axes[axi].get_xticks()

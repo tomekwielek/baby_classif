@@ -3,8 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from mne import io
-from imblearn.over_sampling import RandomOverSampler
-from imblearn.over_sampling import SMOTE, ADASYN
 from sklearn.decomposition import PCA
 from sklearn.decomposition import FastICA
 from sklearn.cluster import KMeans
@@ -19,10 +17,9 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import f1_score, accuracy_score, make_scorer
 from collections import Counter
-from sklearn.gaussian_process import GaussianProcessClassifier as GP
-from sklearn.gaussian_process.kernels import RBF
-from imblearn.over_sampling import RandomOverSampler
-from imblearn.over_sampling import SMOTE, ADASYN
+import random
+import copy
+from IPython.core.debugger import set_trace
 
 from config import (myload, paths, report, raw_path)
 
@@ -65,12 +62,13 @@ def cat_pe_stag(pe, stag):
     y = np.concatenate(stag_, 0)
     return X, y
 
+'''
 def my_oversample(X, y):
-    '''oversampling '''
+    #oversampling
     #X_resampled, y_resampled = ros.fit_sample(X, y)
     X_resampled, y_resampled = SMOTE(random_state=0).fit_sample(X, y)
     return X_resampled, y_resampled
-
+'''
 def vis_PCA(X,y, sel_idxs):
     '''Visualize in 2 dimension after PCA'''
     X_norm = StandardScaler().fit_transform(X)
@@ -95,15 +93,17 @@ def plot_pe(pe, stag, axes=None, mspe=False):
         fig, axes = plt.subplots(2,1)
     if mspe:
         ch_names = ['av_channs_taus'] # if mspe is ploted channels and taus are averaged
-        pe = pe.mean(0)
+        pe = pe.mean(1)
     else:
         ch_names = chs_incl
-    pe = pe.transpose()
+    #pe = pe.transpose()
     df = pd.DataFrame(pe, index=range(pe.shape[0]), columns=ch_names)
     df.plot(ax = axes[0])
     axes[0].set_ylabel('Permutation Entropy')
     time = range(len(stag))
-    axes[1].plot(stag['numeric'].values, 'r*', label = 'ground truth (Scholle)')
+    #axes[1].plot(stag['numeric'].values, 'r*', label = 'ground truth (Scholle)')
+    #set_trace()
+    axes[1].plot(stag, 'r*', label = 'ground truth (Scholle)')
     axes[1].set_xlim(0,len(stag))
     axes[1].set_ylim(0.8,3.2)
     axes[1].set_yticks([1,2,3])
@@ -179,14 +179,11 @@ def vis_clf_probas(pe, stag):
 
 def classify_lso(pe, stag, setup, myshow=True, oversample=False, mysave=False):
     '''classify using leave_sbj_out: single sbj out, optionally oversample'''
-    #clf = make_pipeline(StandardScaler(), LogisticRegression(C = 1,
-    #                                                        solver='liblinear',
-    #                                                        class_weight=None,
-    #                                                        multi_class='ovr'))
     clf = make_pipeline(MinMaxScaler(), svm.SVC(C=1, kernel='linear',
                         probability=False))
     no_sbjs = len(stag)
-    kf = KFold(n_splits = no_sbjs)
+    #kf = KFold(n_splits = no_sbjs)
+    kf = KFold(n_splits = 2)
     scores, predicts, f1s, accs, features, names, f1s_each =  ([] for i in range(7))
     check_mspe = pe[0][0].shape[0] > 11 #check if pe (then #chans=11) or mspe, for plotting only
     for train_idx, test_idx in kf.split(pe, stag):
@@ -206,14 +203,14 @@ def classify_lso(pe, stag, setup, myshow=True, oversample=False, mysave=False):
         #plot clf probabilitites
         #vis_clf_probas(X_test, y_test)
         #average f1, (weighted-is preferable if class imbalance),ignore scores for labels absent in pred_
-        f1_ = f1_score(pred_, y_test, average = 'weighted', labels=np.unique(pred_))
+        f1_ = f1_score(pred_, y_test, average = 'micro', labels=np.unique(pred_))
         f1_each_ = f1_score(pred_, y_test, average=None, labels=[1., 2., 3.])
         acc_ = accuracy_score(pred_, y_test, normalize=True)
         predicts.append((pred_, y_test))
         scores.append(score_)
         f1s.append(f1_); accs.append(acc_); f1s_each.append(f1_each_)
         names.append(sbj_id_)
-        print test_idx
+        print(test_idx)
         #if check_mspe: #for mspe average channels and taus
         #    pe = [pe[i].mean(0) for i in range(len(pe))]
         if myshow:
@@ -241,93 +238,129 @@ def classify_lso(pe, stag, setup, myshow=True, oversample=False, mysave=False):
             sbj_save = stag[test_idx[0]].columns[0][:5]
             mysave(var = pred_, typ=typ_name, sbj=sbj_save)
     return predicts, scores, report, f1s, names, f1s_each
+'''
+def subject_h0_old(pe, stag, no_perm): # permutation first then cv
+    #Based on Stelzer(2013). Get single subject chance accuracy estimate by permuting
+    #stag labeling 'no_perm' times.
 
-def subject_h0(pe, stag, no_perm):
-    '''
-    Based on Stelzer(2013). Get single subject chance accuracy estimate by permuting
-    stag labeling 'no_perm' times.
-    '''
     clf = make_pipeline(MinMaxScaler(), svm.SVC(C=1, kernel='linear',probability=False))
     no_sbjs = len(stag)
-    kf = KFold(n_splits = no_sbjs/2)
-    store_sbjs_h0 = []
+    kf = KFold(n_splits = no_sbjs)
+    h0 = np.empty([no_perm, no_sbjs])
+
+    def my_shuffle(array):
+        random.shuffle(array)
+        return array
+
     for perm_idx in range(no_perm):
+        random.seed(perm_idx)
         #shuffle full y, alternativly shuffle within fold
         #stag_shuff = [stag[i].sample(frac=1).reset_index(inplace=False, drop=True) for i in range(len(stag))]
-        h0 = []
-        #for train_idx, test_idx in kf.split(pe, stag_shuff):
         for train_idx, test_idx in kf.split(pe, stag):
             X = np.concatenate([pe[i].transpose() for i in train_idx], 0)
-
-            #y = np.concatenate([stag_shuff[i]['numeric'] for i in train_idx], 0)
             y = np.concatenate([stag[i]['numeric'] for i in train_idx], 0)
-            np.random.shuffle(y)
+
+            #Xr = my_shuffle(X)
+
+            #np.random.shuffle(y)
             X_test = np.concatenate([pe[i].transpose() for i in test_idx], 0)
-            #y_test =  np.concatenate([stag_shuff[i]['numeric'] for i in test_idx], 0)
             y_test =  np.concatenate([stag[i]['numeric'] for i in test_idx], 0)
             np.random.shuffle(y_test)
+            #np.random.shuffle(X_test) #shuffle tests features
+            clf.fit(X, y)
+            pred_ = clf.predict(X_test)
+            #print pred_
+            #scoring same as for real data, see upper
+            f1_ = f1_score(pred_, y_test, average = 'weighted', labels=np.unique(pred_))
+            #acc_ = accuracy_score(pred_, y_test, normalize=True)
+            #print f1_
+            h0[perm_idx,test_idx] = f1_
+
+        print perm_idx
+    return h0
+'''
+def subject_h0(pe, stag, no_perm): #cv first then permutation
+
+    #Based on Stelzer(2013). Get single subject chance accuracy estimate by permuting
+    #stag labeling 'no_perm' times.
+    #from sklearn.dummy import DummyClassifier
+    #clf = make_pipeline(svm.SVC(C=1000, kernel='linear',probability=False))
+    clf = make_pipeline(svm.LinearSVC(penalty='l1',C=100., dual=False, multi_class='ovr'))
+    #clf = make_pipeline(MinMaxScaler(), LogisticRegression(C=1e10, multi_class='ovr'))
+
+    no_sbjs = len(stag)
+    kf = KFold(n_splits = no_sbjs)
+    #kf = KFold(n_splits = 2)
+    store_sbjs_h0 = []
+
+    #shuffle full y, alternativly shuffle within fold
+    #stag_shuff = [stag[i].sample(frac=1).reset_index(inplace=False, drop=True) for i in range(len(stag))]
+    h0 = np.empty([no_perm, no_sbjs])
+    #for train_idx, test_idx in kf.split(pe, stag_shuff):
+    for train_idx, test_idx in kf.split(pe, stag):
+        print(test_idx)
+        X = np.concatenate([pe[i].transpose() for i in train_idx], 0)
+        X_test = np.concatenate([pe[i].transpose() for i in test_idx], 0)
+        y = np.concatenate([stag[i]['numeric'] for i in train_idx], 0)
+        y_test =  np.concatenate([stag[i]['numeric'] for i in test_idx], 0)
+        for perm_idx in range(no_perm):
             clf.fit(X, y)
             pred_ = clf.predict(X_test)
             #scoring same as for real data, see upper
-            f1_ = f1_score(pred_, y_test, average = 'weighted', labels=np.unique(pred_))
-            acc_ = accuracy_score(pred_, y_test, normalize=True)
-            h0.append(acc_)
-        store_sbjs_h0.append(h0)
-        print perm_idx
-    return np.asarray(store_sbjs_h0)
+            np.random.shuffle(y_test) #shuffle y, rest is fixed
+            f1_ = f1_score(pred_, y_test, average = 'micro', labels=np.unique(pred_))
+            #acc_ = accuracy_score(pred_, y_test, normalize=True)
+            h0[perm_idx,test_idx] = f1_
+            print(f1_)
+    return h0
+
 '''
 Based on Stelzer(2013). Get group chance level by randomly selecting one accuracy per subjects
 and averging. Repeat 'times' times. p value is calculated by r/times where r is count
-of accuracies grater than the actual accuracy. Notice correct formula acc. [North, 2002] is:
+of accuracies greater than the actual accuracy. Notice correct formula acc. [North, 2002] is:
 (r+1)/(times+1)
 '''
 def group_h0(pe, stag, my_score, times=10e4):
     times = int(times)
-    h0_sbj = subject_h0(pe, stag, no_perm=500)
+    no_perm = 200
+    h0_sbj = subject_h0(pe, stag, no_perm=no_perm)
+    #h0_sbj = subject_h0_old(pe, stag, no_perm=no_perm)
     no_sbj = h0_sbj.shape[1]
-    h0_gr = np.zeros([times, no_sbj])
-    for i in range(times):
-        h0_gr[i, :] = [np.random.choice(h0_sbj[sbj_id,:]) for sbj_id in range(no_sbj)]
-        print i
-    h0_av = h0_gr.mean(1)
+    h0_gr = np.zeros([times, 1])
 
-    my_score = np.asarray(my_score).mean(0)
-    r = h0_av > my_score
-    p = r.sum() / float(len(h0_gr))
-    return h0_gr, p
+    for i in range(times):
+        #h0_gr[i, :] = [np.random.choice(h0_sbj[:,sbj_id]) for sbj_id in range(no_sbj)]
+        random.seed(i) #reseed generator
+        # sample with repl. subject performance and average
+        h0_gr[i, :] = np.mean(h0_sbj[np.random.choice(range(no_perm)), :])
+        print(i)
+
+    r = h0_gr > np.asarray(my_score).mean()
+    #p = r.sum() / float(len(h0_gr))
+    p = r.sum() / ( float(times) + 1 )
+    return h0_gr, p, my_score
+
+
+'''
+def save_h0(h0, p, score):
+    import pickle
+
+    h0_sbj = subject_h0(mspe2, stag2, no_perm=10)
+'''
 
 def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
     '''classify using leave_sbj_out; test on single left out as well as
     single left out from the second recording time (fnames2)'''
-    '''
-    from sklearn.pipeline import Pipeline
-    pipe = Pipeline([('scl', MinMaxScaler()),
-		           ('clf', svm.SVC())])
 
-    grid_params = [{'clf__kernel': ['linear', 'rbf'],
-		          'clf__C': [0.001, 0.1, 1, 10, 100],
-                  'clf__gamma' : [0.1, 0.01, 0.001, 0.0001]}]
-
-    from sklearn.grid_search import GridSearchCV
-    gs = GridSearchCV(estimator=pipe,
-			param_grid=grid_params,
-			scoring='accuracy',
-            cv=10)
-    '''
-    clf = make_pipeline(StandardScaler(), svm.SVC(C=1., kernel='linear',
+    clf = make_pipeline(MinMaxScaler(), svm.SVC(C=1., kernel='linear',
                         probability=False))
-    #clf = make_pipeline(StandardScaler(), LogisticRegression(C=1,
-    #                                                        solver='liblinear',
-    #                                                        class_weight=None,
-    #                                                        multi_class='ovr'))
-    #pe1, pe2, stag1, stag2 = align_t1_t2_data(pe1, pe2, stag1, stag2)
-
-    #pe1, pe2, stag1, stag2 = (pe2, pe1, stag2, stag1) #train t1 test t2
+    pe1, pe2, stag1, stag2 = (pe2, pe1, stag2, stag1) #train t1 test t2
     assert len(stag1) == len(stag2)
     no_sbjs = len(stag1)
     kf = KFold(n_splits = no_sbjs)
 
     predicts1, predicts2, f1_1, f1_2, f1_1_NREM, names1, names2 =  ([] for i in range(7))
+    check_mspe = pe1[0][0].shape[0] > 11 #check if pe (then #chans=11) or mspe, for plotting only
 
     for train_idx, test_idx in kf.split(pe1, stag1):
         sbj_id_1 = stag1[test_idx[0]].columns[0][:3]
@@ -343,7 +376,6 @@ def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
         y_test2 =  np.concatenate([stag2[i]['numeric'] for i in test_idx], 0)
 
         clf.fit(X, y)
-        #gs.fit(X, y)
         pred_1 = clf.predict(X_test1)
         pred_2 = clf.predict(X_test2)
 
@@ -363,7 +395,7 @@ def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
             assert stag1[test_idx[0]].columns[0][:3] == stag2[test_idx[0]].columns[0][:3]
             sbj_id_ = stag1[test_idx[0]].columns[0][:3]
             fig, axes = plt.subplots(6,1, sharex = True, figsize = [12,7])
-            plot_pe(pe1[test_idx[0]], stag1[test_idx[0]], axes = axes[:2])
+            plot_pe(pe1[test_idx[0]], stag1[test_idx[0]], axes = axes[:2], mspe=check_mspe)
             axes[2].plot(pred_1, 'bo', label = 'prediction within')
             axes[2].set_xlim(0,len(pred_1))
             axes[2].set_ylim(0.8,3.2)
@@ -375,7 +407,7 @@ def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
             axes[2].set_xticklabels('time [30s]', fontsize='large')
 
             #plot predictin across time
-            plot_pe(pe2[test_idx[0]], stag2[test_idx[0]], axes = axes[3:5])
+            plot_pe(pe2[test_idx[0]], stag2[test_idx[0]], axes = axes[3:5], mspe=check_mspe)
             axes[5].plot(pred_2, 'bo', label = 'prediction across')
             axes[5].set_xlim(0,len(pred_2))
             axes[5].set_ylim(0.8,3.2)
@@ -387,13 +419,8 @@ def classify_generalize_time(pe1, stag1, pe2, stag2, setup, show=True):
             axes[5].set_xticklabels('time [30s]', fontsize='large')
             fig.suptitle(sbj_id_)
             fig.text(0.05, 0.95, setup, size = 22)
-            #report.add_figs_to_section(fig, captions='Sbj '+ str(sbj_id_),
-            #                            section= setup)
-    #print('Best accuracy: %.3f' % gs.best_score_)
-
-    # Best params
-    #print('\nBest params:\n', gs.best_params_)
-
+            report.add_figs_to_section(fig, captions='Sbj '+ str(sbj_id_),
+                                        section= setup)
     return report, predicts1, predicts2, f1_1, f1_2, f1_1_NREM, names1, names2
 
 
@@ -430,8 +457,8 @@ def load_single_append(path, fnames, typ):
     for s in fnames:
         #omit if filepath is empty
         if not os.path.isfile(paths(typ=typ, sbj=s)):
-            print 'Folder is empty'
-            print s
+            print('Folder is empty')
+            print(s)
             continue
         if typ == 'psd':
             stag, pe, freqs = myload(typ=typ, sbj=s) # for psd load freqs bins
@@ -448,9 +475,9 @@ def load_single_append(path, fnames, typ):
             stag = stag[:-1]
         else:
              NotImplementedError
-        print s
-        print len(stag)
-        print pe.shape[1]
+        print(s)
+        print (len(stag))
+        print (pe.shape[1])
         assert len(stag) == pe.shape[-1]
         stag_list.append(stag)
         pe_list.append(pe)
@@ -502,7 +529,7 @@ def order_channels(raw):
     import mne
     chs = raw.info['ch_names']
     missing = [ch for ch in chs_incl if ch not in chs]
-    print 'MISSING CHANNELS: %s' %missing
+    print ('MISSING CHANNELS: %s' %missing)
     # add missing channels as zeros data (!!!)
     miss_data = np.zeros((len(missing), len(raw.times)))
     if len(missing) == 1: #single channel is missing
@@ -520,3 +547,15 @@ def order_channels(raw):
     raw_ordered = raw.reorder_channels(chs_incl)
     #raw.save(fname=raw_path+'test'+fn, overwrite=False)
     return raw_ordered, missing
+
+
+def write_pickle(d, save_name):
+    import pickle
+    with open(save_name, 'wb') as f:
+        pickle.dump(d, f)
+
+def read_pickle(saved_name):
+    import pickle
+    with open(saved_name, 'rb') as f:
+        d = pickle.load(f, encoding='latin1')
+    return d

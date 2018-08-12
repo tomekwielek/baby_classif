@@ -72,7 +72,7 @@ def read_raw(setup, sheet):
             m = np.zeros((chan_len, no_epochs)) # PE
         for i in range(no_epochs):
             e_ = data[...,:window_dp]
-            print e_.shape
+            print (e_.shape)
             data = np.delete(data, np.s_[:window_dp], axis =1 )
             for j in range(chan_len):
                 if mspe:
@@ -122,8 +122,8 @@ def read_raw(setup, sheet):
     #mywriter(idfs, sheet + '.xlsx')
 
     #select single subject
-    #sbj = '211_2_S'
-    #idfs = {k : v for k,v in idfs.items() if k == sbj}
+    sbj = '211_2_S'
+    idfs = {k : v for k,v in idfs.items() if k == sbj}
 
     from config import paths
     for k, v in sorted(idfs.items()):
@@ -135,7 +135,7 @@ def read_raw(setup, sheet):
         #    continue
         #
         if k not in bad:
-            print k
+            print (k)
             raw, stag = load_raw_and_stag(k, v[0])
             raw, _ = order_channels(raw) #reorder channels, add zeros for missings (EMG usually)
             stag = encode(stag)
@@ -144,5 +144,5 @@ def read_raw(setup, sheet):
             mysave(var = [stag, psd, freqs], typ=typ_name, sbj=k[:5])
             #mysave(var = [stag, pe], typ=typ_name, sbj=k[:5])
         elif k in bad:
-            print 'Sbj dropped, see red annot. by H.L in excel file'
+            print ('Sbj dropped, see red annot. by H.L in excel file')
             continue
