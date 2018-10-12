@@ -31,17 +31,12 @@ def read_raw(setup, sheet):
         typ_name = setup
     # set bad sbjs, defined by inspecting excell dat (e.g red annotations by Heidi)
     if sheet == 'St_Pr_corrected_27min':
-        #bad = ['205_1_S', '206_1_S', '208_1_S', '211_1_S', '211_2_S', '212_2_S', '213_1_S',
-        #'213_2_S', '214_1_S', '214_2_S', '218_1_S', '220_1_S', '220_2_S', '221_1_S', '226_1_S', '227_2_S',
-        #'231_2_S', '232_1_S', '232_2_S', '235_1_S', '238_1_S', '239_1_S']
-        bad = ['205_1_S', '206_1_S', '208_1_S', '213_1_S', '238_1_S', '239_1_S']
+        # all but 213_2 considered as nicht auswertbar.
+        # 213_2 schwierig + 'all physio channels flat, ECG reconstructed from EMG - pretty noisy'
+        bad = ['205_1_S', '206_1_S', '208_1_S', '213_1_S', '238_1_S', '239_1_S', '213_2_S']
 
-    elif sheet == 'Staging_vs_Prechtl_27min':
-        bad = ['205_1', '206_1', '207_1_S', '207_2_S', '208_1', '211_1.1heog?', '212_2,2heogref100',
-                '213_1', '213_2,1heog', '213_2.2heogsref100', '214_1,2heogsref100', '214_2,2heogsref100',
-                '218_1,1heog', '220_2.2heogref100', '221_12heogref100', '221_1.1heog', '222_1,2heogsref100',
-                '223_1,2heogsref100', '226_1.2heogsref100', '226_2,1heog', '226_2,2heogref100', '227_2,1heog',
-                '231_2,1heog', '232_1', '232_2,1heog', '235_1,2heogsref100', '235_1,1heog', '238_1', '239_1']
+    if sheet == 'St_Pr_corrected_35min':
+        bad = ['104_1_S'] #104_1-S missing, pressumbly unscorable
     else: bad = []
 
     def preproces(raw):

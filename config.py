@@ -1,9 +1,9 @@
 #raw_path ='H:\\BABY\\data\\bv\\exp\\' #brain vision pp. data
-raw_path ='E:\\BABY\\data\\'
-base_path = 'E:\\BABY\\working\\subjects\\'
-results_path='E:\\BABY\\results\\'
-stag_fname = 'E:\\BABY\\Stages_inklPrechtl_corrected.xlsx'
-report = 'E:\\BABY\\working\\report.html'
+raw_path ='H:\\BABY\\data\\'
+base_path = 'H:\\BABY\\working\\subjects\\'
+results_path='H:\\BABY\\results\\'
+stag_fname = 'H:\\BABY\\Stages_inklPrechtl_corrected.xlsx'
+report = 'H:\\BABY\\working\\report.html'
 from mne.report import Report
 report = Report(report)
 #chs_incl = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4', 'ECG', 'EMG', 'HEOG', 'VEOG']
@@ -71,7 +71,8 @@ def myload(typ, sbj, c=None):
                 'pet3m3_stag_uncorr', 'pet1m4_stag_uncorr', 'mspet1m3', 'mspet_ord1m3',
                 'psd', 'pet1m3_30hz', 'pred']:
         with open(fname, 'rb') as f:
-            out = pickle.load(f, encoding='latin1')
+            #out = pickle.load(f, encoding='latin1')
+            out = pickle.load(f)
     else:
         raise NotImplementedError()
     return out

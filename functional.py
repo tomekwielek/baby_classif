@@ -19,6 +19,7 @@ from sklearn.metrics import f1_score, accuracy_score, make_scorer
 from collections import Counter
 import random
 import copy
+import pickle
 from IPython.core.debugger import set_trace
 
 from config import (myload, paths, report, raw_path)
@@ -559,3 +560,72 @@ def read_pickle(saved_name):
     with open(saved_name, 'rb') as f:
         d = pickle.load(f, encoding='latin1')
     return d
+
+
+def plot_confusion_matrix(cm,  classes,
+                          title,
+                          normalize=False,
+                          cmap=plt.cm.Reds):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    import itertools
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({'font.size': 16})
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    print(cm)
+    plt.figure()
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    #plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45, fontsize=14)
+
+    plt.yticks(tick_marks, classes,fontsize=14)
+
+
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.tight_layout()
+    plt.show()
+
+# Utility function to report best scores
+def sc_report(results, n_top=3):
+    for i in range(1, n_top + 1):
+        candidates = np.flatnonzero(results['rank_test_score'] == i)
+        for candidate in candidates:
+            print("Model with rank: {0}".format(i))
+            print("Mean validation score: {0:.3f} (std: {1:.3f})".format(
+                  results['mean_test_score'][candidate],
+                  results['std_test_score'][candidate]))
+            print("Parameters: {0}".format(results['params'][candidate]))
+
+
+def plot_compares_feature_based(mydict):
+    from scipy.stats import mannwhitneyu as mann
+    import seaborn as sns
+    from numpy import mean
+    U, pval = mann(mydict['mspet1m3'], mydict['psd'])
+    ['mspet1m3'], store_acc['psd']
+    mydict = pd.melt(pd.DataFrame(mydict))
+    sns.barplot(data=mydict, x='variable', y='value', estimator=mean, ci='sd')
+    locs, _ = xticks()
+    plt.xticks(locs, ['MSPE', 'PSD'] )
+    plt.xlabel('Feature extraction')
+    plt.ylabel('Accuracy')
+    plt.text(x=0.5, y=0.685, s='*', fontsize=24)
+    plt.ylim(0.5, 0.7)
+    plt.show()
