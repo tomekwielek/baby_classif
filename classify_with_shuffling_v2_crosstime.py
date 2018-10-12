@@ -16,8 +16,8 @@ from imblearn.under_sampling import RandomUnderSampler
 def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, early2late, myshow=False, \
                     check_mspe=True, null=False, n_folds=2, search=False):
 
-    if not early2late: # if false cross gen: 5weeks - 2weeks otherwise the oposite
-        pe1, pe2, stag1, stag2 = (pe2, pe1, stag2, stag1) #train t1 test t2
+    if five2two == True:
+        pe1, pe2, stag1, stag2 = (pe2, pe1, stag2, stag1)
 
     if search == True:
         clf = ExtraTreesClassifier()
@@ -49,8 +49,12 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, early2late, myshow=False,
                'bootstrap': bootstrap}
     perf = []
     no_sbjs = len(stag1)
+    '''
     for _, out_idx in kf.split(range(no_sbjs)):
         # TEST data
+                X_test = [pe2[i] for i in range(len(pe2)) if i in [out_idx]]
+                y_test = [stag2[i] for i in range(len(stag2)) if i in [out_idx]]
+
         X_test = [pe[i] for i in range(len(pe)) if i in out_idx]
         X_test = np.hstack(X_test).T
         y_test = [stag[i] for i in range(len(stag)) if i in out_idx]
@@ -134,3 +138,4 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, early2late, myshow=False,
 
         if null:
             np.random.shuffle(y_test) #shuffle y, rest is fixed
+    '''        
