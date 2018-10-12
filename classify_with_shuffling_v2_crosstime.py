@@ -48,25 +48,23 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, early2late, myshow=False,
                'min_samples_leaf': min_samples_leaf,
                'bootstrap': bootstrap}
     perf = []
-    no_sbjs = len(stag1)
-    '''
+    no_sbjs = len(stag2)
+
     for _, out_idx in kf.split(range(no_sbjs)):
         # TEST data
-                X_test = [pe2[i] for i in range(len(pe2)) if i in [out_idx]]
-                y_test = [stag2[i] for i in range(len(stag2)) if i in [out_idx]]
-
-        X_test = [pe[i] for i in range(len(pe)) if i in out_idx]
+        X_test = [pe2[i] for i in range(len(pe2)) if i in [out_idx]]
         X_test = np.hstack(X_test).T
-        y_test = [stag[i] for i in range(len(stag)) if i in out_idx]
+        y_test = [stag2[i] for i in range(len(stag2)) if i in [out_idx]]
         y_test = np.vstack(y_test)[:,1].astype('int')
 
         if null:
             np.random.shuffle(y_test) #shuffle y, rest is fixed
 
         #TRAIN and VALID data
-        X_train_val = [pe[i] for i in range(len(pe)) if i not in out_idx]
-        y_train_val = [stag[i] for i in range(len(stag)) if i not in out_idx]
+        X_train_val = [pe1[i] for i in range(len(pe1)) if i not in [out_idx]]
+        y_train_val = [stag1[i] for i in range(len(stag1)) if i not in [out_idx]]
         X_train_val = np.hstack(X_train_val)
+
         #get numeric labeling only
         y_train_val = np.vstack(y_train_val)[:,1].astype('int')
         X_train_val = X_train_val.T
@@ -118,24 +116,3 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, early2late, myshow=False,
         precission = precision_score(pred_test, y_test, average=None)
 
         perf.append((acc, cm, recall, precission))
-
-################################
-    for out_idx in range(0, no_sbjs, 8):
-
-        X_test = [pe2[i] for i in range(len(pe2)) if i in [out_idx]]
-        y_test = [stag2[i] for i in range(len(stag2)) if i in [out_idx]]
-        #training and validation on dataset '1'
-        X_train_val = [pe1[i] for i in range(len(pe1)) if i not in [out_idx]]
-        y_train_val = [stag1[i] for i in range(len(stag1)) if i not in [out_idx]]
-
-        X_train_val = np.hstack(X_train_val)
-        y_train_val = np.vstack(y_train_val)[:,1].astype('int')
-
-        X_train_val = X_train_val.T
-
-        X_test = np.hstack(X_test).T
-        y_test = np.vstack(y_test)[:,1].astype('int')
-
-        if null:
-            np.random.shuffle(y_test) #shuffle y, rest is fixed
-    '''        
