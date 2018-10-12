@@ -13,10 +13,10 @@ from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from time import time
 from imblearn.under_sampling import RandomUnderSampler
 
-
 def classify_shuffle(pe, stag, myshow=False, check_mspe=True, null=False, n_folds=2, search=False):
     no_sbjs = len(stag)
 
+    no_samples =  dict([(1, 45), (2, 45), (3, 45)])
     if search == True:
         clf = ExtraTreesClassifier()
     else:
@@ -65,14 +65,15 @@ def classify_shuffle(pe, stag, myshow=False, check_mspe=True, null=False, n_fold
         X_train_val = X_train_val.T
 
         #resample
-        rus = RandomUnderSampler(random_state=0)
-        rus.fit(X_train_val, y_train_val)
-        X_train_val, y_train_val = rus.sample(X_train_val, y_train_val)
-        rus = RandomUnderSampler(random_state=0)
-        rus.fit(X_test, y_test)
-        X_test, y_test = rus.sample(X_test, y_test)
+        sampler = RandomUnderSampler(random_state=0, ratio=no_samples)
+        sampler.fit(X_train_val, y_train_val)
+        X_train_val, y_train_val = sampler.sample(X_train_val, y_train_val)
+        sampler = RandomUnderSampler(random_state=0, ratio=no_samples)
+        sampler.fit(X_test, y_test)
+        X_test, y_test = sampler.sample(X_test, y_test)
         print(Counter(y_test).items())
         print(Counter(y_train_val).items())
+        print('\n')
 
         if search:
             # run random search

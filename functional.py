@@ -581,7 +581,7 @@ def plot_confusion_matrix(cm,  classes,
 
     print(cm)
     plt.figure()
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.imshow(cm, interpolation='nearest', cmap=cmap, vmin=0, vmax=0.8)
     #plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(classes))

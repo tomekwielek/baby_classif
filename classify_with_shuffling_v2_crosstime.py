@@ -13,9 +13,10 @@ from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from time import time
 from imblearn.under_sampling import RandomUnderSampler
 
-def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, early2late, myshow=False, \
+def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
                     check_mspe=True, null=False, n_folds=2, search=False):
 
+    no_samples =  dict([(1, 45), (2, 45), (3, 45)])
     if five2two == True:
         pe1, pe2, stag1, stag2 = (pe2, pe1, stag2, stag1)
 
@@ -48,36 +49,37 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, early2late, myshow=False,
                'min_samples_leaf': min_samples_leaf,
                'bootstrap': bootstrap}
     perf = []
+    assert len(stag1) == len(stag2)
     no_sbjs = len(stag2)
 
     for _, out_idx in kf.split(range(no_sbjs)):
         # TEST data
-        X_test = [pe2[i] for i in range(len(pe2)) if i in [out_idx]]
+        X_test = [pe2[i] for i in range(len(pe2)) if i in out_idx]
         X_test = np.hstack(X_test).T
-        y_test = [stag2[i] for i in range(len(stag2)) if i in [out_idx]]
+        y_test = [stag2[i] for i in range(len(stag2)) if i in out_idx]
         y_test = np.vstack(y_test)[:,1].astype('int')
 
         if null:
             np.random.shuffle(y_test) #shuffle y, rest is fixed
 
         #TRAIN and VALID data
-        X_train_val = [pe1[i] for i in range(len(pe1)) if i not in [out_idx]]
-        y_train_val = [stag1[i] for i in range(len(stag1)) if i not in [out_idx]]
+        X_train_val = [pe1[i] for i in range(len(pe1)) if i not in out_idx]
+        y_train_val = [stag1[i] for i in range(len(stag1)) if i not in out_idx]
         X_train_val = np.hstack(X_train_val)
 
         #get numeric labeling only
         y_train_val = np.vstack(y_train_val)[:,1].astype('int')
         X_train_val = X_train_val.T
-
         #resample
-        rus = RandomUnderSampler(random_state=0)
-        rus.fit(X_train_val, y_train_val)
-        X_train_val, y_train_val = rus.sample(X_train_val, y_train_val)
-        rus = RandomUnderSampler(random_state=0)
-        rus.fit(X_test, y_test)
-        X_test, y_test = rus.sample(X_test, y_test)
-        print(Counter(y_test).items())
+        sampler = RandomUnderSampler(random_state=0, ratio=no_samples)
+        sampler.fit(X_train_val, y_train_val)
+        X_train_val, y_train_val = sampler.sample(X_train_val, y_train_val)
+        sampler = RandomUnderSampler(random_state=0, ratio=no_samples)
+        sampler.fit(X_test, y_test)
+        X_test, y_test = sampler.sample(X_test, y_test)
         print(Counter(y_train_val).items())
+        print(Counter(y_test).items())
+        print('\n')
 
         if search:
             # run random search
@@ -116,3 +118,4 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, early2late, myshow=False,
         precission = precision_score(pred_test, y_test, average=None)
 
         perf.append((acc, cm, recall, precission))
+    return perf
