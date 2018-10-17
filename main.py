@@ -41,13 +41,13 @@ for setup in ['mspet1m3', 'psd']:
             mspe2_ = [ mspe2[i ][:4, ...] for i in range(len(mspe2)) ] #use scale: 1, 2, 3, 4 only
             mspe2 = [ mspe2_[i].reshape(-1, mspe2_[i].shape[-1]) for i in range(len(mspe2_)) ] #reshape
 
-        if time == 2:
-            data_pe, data_stag = mspe1, stag1
-        elif time == 5:
-            data_pe, data_stag = mspe2, stag2
-        elif time == 'cat':
-            data_pe = mspe1 + mspe2
-            data_stag = stag1 + stag2
+            if time == 2:
+                data_pe, data_stag = mspe1, stag1
+            elif time == 5:
+                data_pe, data_stag = mspe2, stag2
+            elif time == 'cat':
+                data_pe = mspe1 + mspe2
+                data_stag = stag1 + stag2
 
         elif setup == 'psd':
             # SIMPLE GENERALIZATION BASED ON PSD
@@ -64,13 +64,14 @@ for setup in ['mspet1m3', 'psd']:
             psd2 = rel_psd2
             psd1 = [ psd1[i].reshape(-1, psd1[i].shape[-1]) for i in range(len(psd1)) ] # reshape
             psd2 = [ psd2[i].reshape(-1, psd2[i].shape[-1]) for i in range(len(psd2)) ] #reshape
-        if time == 2:
-            data_pe, data_stag = psd1, stag1
-        elif time == 5:
-            data_pe, data_stag = psd2, stag2
-        elif time == 'cat':
-            data_pe = psd1 + psd2
-            data_stag = stag1 + stag2
+
+            if time == 2:
+                data_pe, data_stag = psd1, stag1
+            elif time == 5:
+                data_pe, data_stag = psd2, stag2
+            elif time == 'cat':
+                data_pe = psd1 + psd2
+                data_stag = stag1 + stag2
 
         # Get actual scores
         f1, f1_indiv = classify_shuffle(data_pe, data_stag, myshow=False, check_mspe=True, null=False,
