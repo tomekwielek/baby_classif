@@ -27,7 +27,6 @@ n_folds = 2
 store_acc = {'mspet1m3' : [], 'psd':[]}
 
 for setup in ['mspet1m3', 'psd']:
-    f1_iter = []
     for i in range(20):
         if setup == 'mspet1m3':
         # SIMPLE GENERALIZATION BASED ON MSPE
