@@ -45,7 +45,9 @@ def classify_shuffle(pe, stag, myshow=False, check_mspe=True, null=False, n_fold
                'min_samples_split': min_samples_split,
                'min_samples_leaf': min_samples_leaf,
                'bootstrap': bootstrap}
-    perf = []
+    #perf = []
+    f1_individual_store = []
+    f1_store = []
     for _, out_idx in kf.split(range(no_sbjs)):
         # TEST data
         X_test = [pe[i] for i in range(len(pe)) if i in out_idx]
@@ -78,7 +80,7 @@ def classify_shuffle(pe, stag, myshow=False, check_mspe=True, null=False, n_fold
         if search:
             # run random search
             rf_random = RandomizedSearchCV(estimator=clf, param_distributions=random_grid,
-                        n_iter = 100, cv=sskf, verbose=2, random_state=42, n_jobs=-1)
+                        n_iter = 100, cv=sskf, verbose=2, random_state=42, n_jobs=1)
             start = time()
             rf_random.fit(X_train_val, y_train_val)
             print("RandomSearchCV took %.2f seconds for %d candidate parameter settings."
@@ -104,32 +106,18 @@ def classify_shuffle(pe, stag, myshow=False, check_mspe=True, null=False, n_fold
             #for f in range(X.shape[1]):
             #    print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
 
-        #f1_test = f1_score(pred_test, y_test, average=f1_average)
-        acc = accuracy_score(pred_test, y_test)
+        #acc = accuracy_score(pred_test, y_test)
+        f1 = f1_score(pred_test, y_test, average='macro')
+        f1_individual =  f1_score(pred_test, y_test, average=None)
+        #cm = confusion_matrix(pred_test, y_test)
+        #recall = recall_score(pred_test, y_test, average=None)
+        #precission = precision_score(pred_test, y_test, average=None)
 
-        cm = confusion_matrix(pred_test, y_test)
-        recall = recall_score(pred_test, y_test, average=None)
-        precission = precision_score(pred_test, y_test, average=None)
+        #perf.append((acc, cm, recall, precission))
+        f1_store.append(f1)
+        f1_individual_store.append(f1_individual)
 
-        perf.append((acc, cm, recall, precission))
-
-        if myshow:
-            fig, axes = plt.subplots(3,1, sharex = True, figsize = [12,7])
-
-            plot_pe(X_test, y_test, axes = axes[:2], mspe=check_mspe)
-            axes[2].plot(pred_test, 'bo', label = 'prediction')
-            axes[2].set_xlim(0,len(pred_test))
-            axes[2].set_ylim(0.8,3.2)
-            axes[2].set_yticks([1,2,3])
-            axes[2].set_yticklabels(['N','R','W'], fontsize='large')
-            axes[2].legend()
-            times = range(len(pred_test))
-            axes[2].set_xticks(times)
-            axes[2].set_xticklabels('time [30s]', fontsize='large')
-            f1_str = 'f1=' + str(round(f1_test,2))
-            fig.text(0.05, 0.95, ['F1', f1_str], size = 22)
-
-            report.add_figs_to_section(fig, captions='Sbj '+ name_test,
-                                       section= 'MSPE')
-
-    return perf, report
+    #Mean folds
+    f1_av = np.asarray(f1_store).mean()
+    f1_av_individual = np.asarray(f1_individual_store).mean(0)
+    return (f1_av, f1_av_individual)

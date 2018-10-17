@@ -49,6 +49,8 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
                'min_samples_leaf': min_samples_leaf,
                'bootstrap': bootstrap}
     perf = []
+    f1_individual_store = []
+    f1_store = []
     assert len(stag1) == len(stag2)
     no_sbjs = len(stag2)
 
@@ -84,7 +86,7 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
         if search:
             # run random search
             rf_random = RandomizedSearchCV(estimator=clf, param_distributions=random_grid,
-                        n_iter = 100, cv=sskf, verbose=2, random_state=42, n_jobs=-1)
+                        n_iter = 100, cv=sskf, verbose=2, random_state=42, n_jobs=1)
             start = time()
             rf_random.fit(X_train_val, y_train_val)
             print("RandomSearchCV took %.2f seconds for %d candidate parameter settings."
@@ -110,12 +112,18 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
             #for f in range(X.shape[1]):
             #    print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
 
-        #f1_test = f1_score(pred_test, y_test, average=f1_average)
-        acc = accuracy_score(pred_test, y_test)
+        #acc = accuracy_score(pred_test, y_test)
+        f1 = f1_score(pred_test, y_test, average='macro')
+        f1_individual =  f1_score(pred_test, y_test, average=None)
 
-        cm = confusion_matrix(pred_test, y_test)
-        recall = recall_score(pred_test, y_test, average=None)
-        precission = precision_score(pred_test, y_test, average=None)
+        #cm = confusion_matrix(pred_test, y_test)
+        #recall = recall_score(pred_test, y_test, average=None)
+        #precission = precision_score(pred_test, y_test, average=None)
+        #perf.append((acc, cm, recall, precission))
+        f1_store.append(f1)
+        f1_individual_store.append(f1_individual)
 
-        perf.append((acc, cm, recall, precission))
-    return perf
+    #Mean folds
+    f1_av = np.asarray(f1_store).mean()
+    f1_av_individual = np.asarray(f1_individual_store).mean(0)
+    return (f1_av, f1_av_individual)

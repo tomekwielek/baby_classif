@@ -558,7 +558,7 @@ def write_pickle(d, save_name):
 def read_pickle(saved_name):
     import pickle
     with open(saved_name, 'rb') as f:
-        d = pickle.load(f, encoding='latin1')
+        d = pickle.load(f)#, encoding='latin1')
     return d
 
 
