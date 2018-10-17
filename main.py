@@ -76,6 +76,8 @@ for setup in ['mspet1m3', 'psd']:
         # Get actual scores
         f1, f1_indiv = classify_shuffle(data_pe, data_stag, myshow=False, check_mspe=True, null=False,
                                     n_folds=n_folds, search=True)
+        store_acc[setup].extend([acc])
+
 #Run shuffling
 nulliter  = 1000
 null_f1 = np.empty([nulliter])

@@ -23,7 +23,7 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
     if search == True:
         clf = ExtraTreesClassifier()
     else:
-        clf = ExtraTreesClassifier(250) #NO search
+        clf = ExtraTreesClassifier(250, n_jobs=2) #NO search
 
     #external cv,
     #kf = KFold(n_splits=n_folds, shuffle=True, random_state=11)
@@ -86,7 +86,7 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
         if search:
             # run random search
             rf_random = RandomizedSearchCV(estimator=clf, param_distributions=random_grid,
-                        n_iter = 100, cv=sskf, verbose=2, random_state=42, n_jobs=1)
+                        n_iter = 100, cv=sskf, verbose=2, random_state=42, n_jobs=2)
             start = time()
             rf_random.fit(X_train_val, y_train_val)
             print("RandomSearchCV took %.2f seconds for %d candidate parameter settings."
