@@ -20,7 +20,6 @@ fnames2 = [f for f in fnames if f.endswith('2')] #filter folders
 sel_idxs = [1,2,3]
 n_folds = 2
 five2two = False #if True cross gen: 5weeks - 2weeks otherwise the oposite
-
 setup= 'mspet1m3'
 
 if setup == 'mspet1m3':
@@ -38,8 +37,12 @@ if setup == 'mspet1m3':
     mspe2_ = [ mspe2[i ][:4, ...] for i in range(len(mspe2)) ] #use scale: 1, 2, 3, 4 only
     mspe2 = [ mspe2_[i].reshape(-1, mspe2_[i].shape[-1]) for i in range(len(mspe2_)) ] #reshape
 
+    # Index for plot sbj
+    idx_plot = 4
+    assert names1[idx_plot].split('_')[0] == names2[idx_plot].split('_')[0]
+
     # Get actual scores
-    f1, f1_indiv = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, myshow=False, \
+    f1, f1_indiv = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, idx_plot, myshow=False, \
                         check_mspe=True, null=False, n_folds=n_folds, five2two=five2two, search=True)
 
     #Run shuffling
@@ -47,7 +50,7 @@ if setup == 'mspet1m3':
     null_f1 = np.empty([nulliter])
     null_f1_indiv = np.empty([nulliter, 3])
     for idx in range(nulliter):
-        f1_, f1_indiv_ = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, myshow=False, \
+        f1_, f1_indiv_ = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, idx_plot, myshow=False, \
                             check_mspe=True, null=True, n_folds=n_folds, five2two=five2two, search=False)
         null_f1[idx] = f1_
         null_f1_indiv[idx] = f1_indiv_
