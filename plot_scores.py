@@ -9,22 +9,13 @@ from IPython.core.debugger import set_trace
 from matplotlib.patches import Patch
 
 def my_load(fname):
-    path = results_path + 'scores\\f1' + '\\' + fname
+    path = results_path + 'scores' + '\\acc\\' + fname
     scores = read_pickle(path)
     return scores
 
-fnames_dict = {'five' : ({'f_score' : 'five_f1.txt'},
-                        {'f_indivs' : 'five_f1_indiv.txt'},
+fnames_dict = {'five' : ({'acc_score' : 'mspe5_acc_prec_rec.txt'},
                             {'idx' : (1,1)}),
-               'two': ({'f_score' : 'two_f1.txt'},
-                        {'f_indivs' : 'two_f1_indiv.txt'},
-                        {'idx' : (0,0)}),
-               'five2two' : ({'f_score' : 'five2two_f1.txt'},
-                        {'f_indivs' : 'five2two_f1_indiv.txt'},
-                         {'idx' : (1,0)}),
-                'two2five' : ({'f_score' : 'two2five_f1.txt'},
-                            {'f_indivs' : 'two2five_f1_indiv.txt'},
-                           {'idx' : (0,1)})
+
                  }
 
 #PLOT AV S1 SCORES
@@ -46,9 +37,9 @@ def plot_f(null_f, f, title, ax):
 
 fig, axes = plt.subplots(2,2, sharex=False, sharey=False)
 for sn in fnames_dict.keys():
-    null_f, f = my_load(fnames_dict[sn][0]['f_score'])
+    null_f, f = my_load(fnames_dict[sn][0]['acc_score'])
     title = 'F score classification: {}'.format(sn)
-    idx = fnames_dict[sn][2]['idx']
+    idx = fnames_dict[sn][1]['idx']
     print idx
 
     plot_f(null_f, f, title, axes[idx])

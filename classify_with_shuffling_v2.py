@@ -9,10 +9,9 @@ from config import (myload, paths, report, raw_path)
 from functional import plot_pe, sc_report
 from IPython.core.debugger import set_trace
 from collections import Counter
-from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from time import time
 from imblearn.under_sampling import RandomUnderSampler
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.pipeline import make_pipeline
 
 def plot_sinlge_sbj(pred, actual, f1_plot):
@@ -44,13 +43,13 @@ def plot_sinlge_sbj(pred, actual, f1_plot):
 def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=False, n_folds=2, search=False):
 
     no_sbjs = len(stag)
-
+    '''
     # get plot-subject
     X_plot = pe[idx_plot].T
     stag_plot = stag[idx_plot]
     y_plot = np.asarray(stag_plot)[:,1].astype('int')
     y_plot = y_plot.T
-
+    '''
     no_samples =  dict([(1, 45), (2, 45), (3, 45)])
     if search == True:
         clf = ExtraTreesClassifier()
@@ -124,8 +123,8 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
             pred_test = rf_random.predict(X_test)
 
             # classify single plot-subject if correct fold (no sampling here)
-            if idx_plot in out_idx:
-                pred_plot = rf_random.predict(X_plot)
+            #if idx_plot in out_idx:
+            #    pred_plot = rf_random.predict(X_plot)
 
         elif search == False:
             # NO random search
@@ -135,8 +134,8 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
             pred_test = clf.predict(X_test)
             #pred_test = pipe.predict(X_test)
             # classify single plot-subject if correct fold
-            if idx_plot in out_idx:
-                pred_plot = clf.predict(X_plot)
+            #if idx_plot in out_idx:
+            #    pred_plot = clf.predict(X_plot)
                 #pred_plot = pipe.predict(X_plot)
             #GET feature importance
             '''
@@ -153,7 +152,9 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
             '''
 
 
-        f1 = f1_score(pred_test, y_test, average='macro')
+        #f1 = f1_score(pred_test, y_test, average='macro')
+        f1= accuracy_score(pred_test, y_test)
+        #set_trace()
         f1_individual =  f1_score(pred_test, y_test, average=None)
 
         f1_store.append(f1)
@@ -163,11 +164,12 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
 
     #Agregate folds
     f1_av = np.asarray(f1_store).mean()
+    #set_trace()
     f1_av_individual = np.asarray(f1_individual_store).mean(0)
 
-    f1_pred_plot = f1_score(pred_plot, y_plot, average='micro')
-    if not null:
-        plot_sinlge_sbj(pred_plot, stag_plot['numeric'], f1_pred_plot)
+    #f1_pred_plot = f1_score(pred_plot, y_plot, average='micro')
+    #if not null:
+    #    plot_sinlge_sbj(pred_plot, stag_plot['numeric'], f1_pred_plot)
 
 
     return (f1_av, f1_av_individual)

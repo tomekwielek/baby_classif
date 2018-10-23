@@ -4,15 +4,15 @@ from pyentrp import entropy as ent
 from IPython.core.debugger import set_trace
 
 # from https://www.elenacuoco.com/2016/07/31/simulating-time-series/
-'''
 #ARMA
 import statsmodels.api as sm
 from statsmodels.tsa.arima_process import arma_generate_sample
+from pyentrp import entropy as ent
 np.random.seed(12345)
 
-sfreq = 128
-window = 30
-segments = 2
+sfreq = 4
+window = 15
+segments = 1
 nsample = sfreq * window * segments
 x1 = np.linspace(0, 30, nsample)
 
@@ -22,35 +22,33 @@ arparams = np.r_[1, -arparams]
 maparam = np.r_[1, maparams]
 
 raw = arma_generate_sample(arparams, maparams, nsample)
-#fig, ax = plt.subplots()
-#ax.plot(x1, raw)
+
+def plot_raw(data):
+    fig, ax = plt.subplots(figsize=(7,4))
+    times = range(len(data))
+    ax.plot(times, data, linestyle='-', marker='o', color='black')
+    ax.axvline(times[0], color='b', alpha=0.5, linestyle='--')
+    ax.axvline(times[2], color='b', alpha=0.5, linestyle='--')
+    ax.axvline(times[4], color='b', alpha=0.5, linestyle='--')
+    ax.axvline(times[6], color='b', alpha=0.5, linestyle='--')
+    ax.set(xticks=[], yticks=[])
+    plt.show()
+
+def get_granulated(data, scale):
+    gr = ent.util_granulate_time_series(raw, scale)
+    return gr
+
+
+raw1 = get_granulated(raw, scale=2)
+
+plot_raw(raw)
+plot_raw(raw1)
 
 
 
-def compute_pe_segm(raw, embed=3, tau=1, window=window, mspe=True):
-    length_dp = len(raw)
-    window_dp = int(window*sfreq)
-    no_epochs = int(length_dp // window_dp)
-    #set_trace()
-    chan_len = 1
-    store_segm = []
-    data = raw
-    #data = raw[np.newaxis, :]
 
-    scale = 4
-    m = np.zeros((scale, no_epochs)) # multiscale entropy
 
-    course_store = []
-    for i in range(no_epochs):
-        e_ = data[...,:window_dp]
-        print e_.shape
-        data = np.delete(data, np.s_[:window_dp])
 
-        m[:,i], course = ent.multiscale_permutation_entropy(e_, m=3, delay=1, scale=scale)
-        course_store.append(course)
-        del e_
-    return m, course_store
-pe, course  = compute_pe_segm(raw, embed=3, tau=1, window=window, mspe=True)
 
 '''
 
