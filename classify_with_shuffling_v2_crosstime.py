@@ -14,12 +14,10 @@ from time import time
 from imblearn.under_sampling import RandomUnderSampler
 from classify_with_shuffling_v2 import plot_sinlge_sbj
 
-def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, idx_plot, five2two, myshow=False, \
+def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
                     check_mspe=True, null=False, n_folds=2, search=False):
 
 
-
-    no_samples =  dict([(1, 45), (2, 45), (3, 45)])
     if five2two == True:
         pe1, pe2, stag1, stag2 = (pe2, pe1, stag2, stag1)
 
@@ -27,19 +25,19 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, idx_plot, five2two, mysho
     no_sbjs = len(stag1)
 
     # get plot-subject
-    X_plot = pe2[idx_plot].T
-    stag_plot = stag2[idx_plot]
-    y_plot = np.asarray(stag_plot)[:,1].astype('int')
-    y_plot = y_plot.T
+    #X_plot = pe2[idx_plot].T
+    #stag_plot = stag2[idx_plot]
+    #y_plot = np.asarray(stag_plot)[:,1].astype('int')
+    #y_plot = y_plot.T
 
 
     if search == True:
         clf = ExtraTreesClassifier()
     else:
-        clf = ExtraTreesClassifier(250, n_jobs=2) #NO search
+        clf = ExtraTreesClassifier(600, n_jobs=-1) #NO search
 
     #external cv,
-    kf = RepeatedKFold(n_splits=n_folds, n_repeats=5, random_state=11)
+    kf = RepeatedKFold(n_splits=n_folds, n_repeats=10, random_state=11)
 
     #internal cv
     sskf = StratifiedShuffleSplit(n_splits=5, test_size=0.3, random_state=111)
@@ -66,6 +64,7 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, idx_plot, five2two, mysho
     assert len(stag1) == len(stag2)
     no_sbjs = len(stag2)
 
+    perf = []
     for _, out_idx in kf.split(range(no_sbjs)):
         # TEST data
         X_test = [pe2[i] for i in range(len(pe2)) if i in out_idx]
@@ -86,10 +85,10 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, idx_plot, five2two, mysho
         X_train_val = X_train_val.T
 
         #resample
-        sampler = RandomUnderSampler(random_state=0, ratio=no_samples)
+        sampler = RandomUnderSampler(random_state=0)
         sampler.fit(X_train_val, y_train_val)
         X_train_val, y_train_val = sampler.sample(X_train_val, y_train_val)
-        sampler = RandomUnderSampler(random_state=0, ratio=no_samples)
+        sampler = RandomUnderSampler(random_state=0)
         sampler.fit(X_test, y_test)
         X_test, y_test = sampler.sample(X_test, y_test)
         print(Counter(y_train_val).items())
@@ -109,8 +108,8 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, idx_plot, five2two, mysho
             pred_test = rf_random.predict(X_test)
 
             # classify single plot-subject if correct fold (no sampling here)
-            if idx_plot in out_idx:
-                pred_plot = rf_random.predict(X_plot)
+            #if idx_plot in out_idx:
+            #    pred_plot = rf_random.predict(X_plot)
 
         elif search == False:
             # NO random search
@@ -119,8 +118,8 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, idx_plot, five2two, mysho
             pred_test = clf.predict(X_test)
 
             # classify single plot-subject if correct fold
-            if idx_plot in out_idx:
-                pred_plot = clf.predict(X_plot)
+            #if idx_plot in out_idx:
+            #    pred_plot = clf.predict(X_plot)
 
             #importances = forest.feature_importances_
             #std = np.std([tree.feature_importances_ for tree in forest.estimators_],
@@ -133,19 +132,15 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, idx_plot, five2two, mysho
             #for f in range(X.shape[1]):
             #    print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
 
-        f1 = f1_score(pred_test, y_test, average='macro')
-        f1_individual =  f1_score(pred_test, y_test, average=None)
+        acc = accuracy_score(pred_test, y_test)
+
+        cmx = confusion_matrix(pred_test, y_test)
+        recall = recall_score(pred_test, y_test, average=None)
+        precission = precision_score(pred_test, y_test, average=None)
+        f1_perclass = f1_score(pred_test, y_test, average=None)
+
+        perf.append((acc, cmx, recall, precission, f1_perclass))
 
 
-        f1_store.append(f1)
-        f1_individual_store.append(f1_individual)
 
-    #Agregate folds
-    f1_av = np.asarray(f1_store).mean()
-    f1_av_individual = np.asarray(f1_individual_store).mean(0)
-
-    f1_pred_plot = f1_score(pred_plot, y_plot, average='micro')
-    plot_sinlge_sbj(pred_plot, stag_plot['numeric'], f1_pred_plot)
-
-
-    return (f1_av, f1_av_individual)
+    return perf
