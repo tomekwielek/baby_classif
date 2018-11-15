@@ -47,7 +47,7 @@ def select_class_to_classif(pe, stag, sel_idxs):
             raise NotImplementedError()
         stag_sub.append(stag[i].iloc[idx_select])
         pe_sub.append(pe[i][..., idx_select])
-    return pe_sub, stag_sub
+    return pe_sub, stag_sub, idx_select
 
 def merge_stages(stag, mapper):
     for i in range(len(stag)):
@@ -629,3 +629,73 @@ def plot_compares_feature_based(mydict):
     plt.text(x=0.5, y=0.685, s='*', fontsize=24)
     plt.ylim(0.5, 0.7)
     plt.show()
+
+
+def plot_acc_depending_scale(data):
+    '''
+    Plot acc for stages depedning on scales used in mspe
+    '''
+    import seaborn as sns
+    no_rep = len(data['s1'])
+    acc_dict = {'s1':[], 's2': [], 's3': [], 's4': []}
+    perclass_dict =  {'s1':[], 's2': [], 's3': [], 's4': []}
+    for s in data.keys():
+        for r in range(no_rep):
+            accav = np.asarray([data[s][r][i][0] for i in range(n_folds)]).mean(0)
+            f1perclass =  np.asarray([data[s][r][i][4] for i in range(n_folds)]).mean(0)
+            my_dict[s].append(accav)
+            perclass_dict[s].append(f1perclass)
+
+    perclass_dict_stat = {'s1': {}, 's2': {}, 's3': {}, 's4': {}}
+    for s in perclass_dict.keys():
+        perclass_dict[s] = np.array(perclass_dict[s])
+    df1 = pd.DataFrame.from_dict(perclass_dict['s1'])
+    df1['scale'] = ['s1'] * len(df1)
+    df2 = pd.DataFrame.from_dict(perclass_dict['s2'])
+    df2['scale'] = ['s2'] * len(df2)
+    df3 = pd.DataFrame.from_dict(perclass_dict['s3'])
+    df3['scale'] = ['s3'] * len(df3)
+    df4 = pd.DataFrame.from_dict(perclass_dict['s4'])
+    df4['scale'] = ['s4'] * len(df4)
+    df = pd.concat([df1, df2, df3, df4])
+    df.rename(columns = {0:'NREM', 1:'REM', 2:'WAKE'}, inplace=True)
+
+    df = df.melt(value_vars= ['NREM', 'REM', 'WAKE'], id_vars='scale')
+    sns.factorplot(x='scale', y='value', data=df,  kind='box', hue='variable')
+    plt.show()
+
+
+def remove_20hz_artif(pe, psd, stag, names, freqs, bad_sbjs):
+    '''
+    bad_sbjs - which subject have 20Hz artifacts (inspect plots )
+    iterate over mypsd, for bad_sbjs get frequencies in 20Hz, threshold, keep bad_e_idcs and remove epochs,
+    use bad_e_idcs to update pe, stag, names
+    '''
+    store_pe, store_psd, store_stag= [[] for i in range(3)]
+    freqs = freqs.astype(int)
+    idx_freq = np.where(freqs == 20)
+    for idx_sbj, sbj in enumerate(names):
+        if sbj in bad_sbjs:
+            print sbj
+            #plot_data(pe[idx_sbj], psd[idx_sbj], stag[idx_sbj], names_pe[idx_sbj])
+            this_data = psd[idx_sbj][idx_freq,:,:][0]
+            idx_time = np.where(this_data[0,0,:] > np.percentile(this_data[0,0,:], 88))[0]
+            if sbj in ['236_2'] and 0 in idx_time:
+                idx_time = idx_time[1:] #see annot by HL in excel and functional.py; BL shorter
+            mask_psd = np.ones(psd[idx_sbj].shape,dtype=bool)
+            mask_psd[:,:,idx_time] = False
+            psd_cor = psd[idx_sbj][mask_psd].reshape(psd[idx_sbj].shape[:2]+(-1,))
+            mask_pe = np.ones(pe[idx_sbj].shape,dtype=bool)
+            mask_pe[:,:,idx_time] = False
+            pe_cor = pe[idx_sbj][mask_pe].reshape(pe[idx_sbj].shape[:2]+(-1,))
+            #set_trace()
+            stag_cor = stag[idx_sbj].drop(idx_time, axis=0)
+            #plot_data(pe_cor, psd_cor, stag_cor, names[idx_sbj])
+        else:
+            pe_cor = pe[idx_sbj]
+            psd_cor = psd[idx_sbj]
+            stag_cor = stag[idx_sbj]
+        store_pe.append(pe_cor)
+        store_psd.append(psd_cor)
+        store_stag.append(stag_cor)
+    return (store_pe, store_psd, store_stag)
