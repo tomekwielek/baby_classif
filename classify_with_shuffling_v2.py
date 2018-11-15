@@ -168,8 +168,8 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
     f1_av_individual = np.asarray(f1_individual_store).mean(0)
 
     #f1_pred_plot = f1_score(pred_plot, y_plot, average='micro')
-    #if not null:
-    #    plot_sinlge_sbj(pred_plot, stag_plot['numeric'], f1_pred_plot)
+    if not null:
+        plot_sinlge_sbj(pred_plot, stag_plot['numeric'], f1_pred_plot)
 
 
     return (f1_av, f1_av_individual)

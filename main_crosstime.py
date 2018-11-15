@@ -46,26 +46,35 @@ if setup == 'mspet1m3':
     # Get actual scores
     perf = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, myshow=False, \
                         check_mspe=True, null=False, n_folds=n_folds, five2two=five2two, search=False)
-
-
+    accav = np.asarray([perf[i][0] for i in range(len(perf))]).mean(0)
+    print accav
+    cmav = np.asarray([perf[i][1] for i in range(len(perf))]).mean(0)
+    recall =  np.asarray([perf[i][2] for i in range(len(perf))]).mean(0)
+    precission =  np.asarray([perf[i][3] for i in range(len(perf))]).mean(0)
+    #f1perclass =  np.asarray([perf[i][4] for i in range(len(perf))]).mean(0)
+    cm_title = 'Confusion matrix'
+    plot_confusion_matrix(cmav, ['NREM', 'REM', 'WAKE'], title=cm_title, normalize=True)
+    #write_pickle(perf, 'mspe_five2two_acc_prec_rec.txt')
 
 
 
     #Run shuffling
-    nulliter  = 1000
-    null_f1 = np.empty([nulliter])
-    null_f1_indiv = np.empty([nulliter, 3])
+    nulliter  = 100
+    #null_f1 = np.empty([nulliter])
+    #null_f1_indiv = np.empty([nulliter, 3])
+    null_perf = []
     for idx in range(nulliter):
-        f1_, f1_indiv_ = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, idx_plot, myshow=False, \
+        perf_n = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, myshow=False, \
                             check_mspe=True, null=True, n_folds=n_folds, five2two=five2two, search=False)
-        null_f1[idx] = f1_
-        null_f1_indiv[idx] = f1_indiv_
+        #null_f1[idx] = f1_
+        #null_f1_indiv[idx] = f1_indiv_
+        #print(idx)
         print(idx)
-
-
+        null_perf.append(perf_n)
+write_pickle(null_perf, 'null_two2five.txt')
     #Save
-    write_pickle((null_f1, f1), 'two2five_f1.txt')
-    write_pickle((null_f1_indiv, f1_indiv), 'two2five_f1_indiv.txt')
+    #write_pickle((null_f1, f1), 'two2five_f1.txt')
+    #write_pickle((null_f1_indiv, f1_indiv), 'two2five_f1_indiv.txt')
 
     #Test saving
     #n, a = read_pickle('two2five_recall.txt')
