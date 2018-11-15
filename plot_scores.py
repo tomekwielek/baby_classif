@@ -104,17 +104,18 @@ f1_cross_cat_melt = pd.melt(f1_cross_cat, id_vars= 'time')
 #PLOT WITHIN
 gs1 = gridspec.GridSpec(2, 4)
 gs1.update(left=0.1, right=0.48, wspace=0.05)
-ax1 = plt.subplot(gs1[:, :3])
-ax2 = plt.subplot(gs1[:, 3:4])
-ax3= plt.subplot(gs1[:, 4:7])
-ax4= plt.subplot(gs1[:, 7:8])
+ax1 = plt.subplot(gs1[0, 0])
+ax2 = plt.subplot(gs1[0, 1])
+ax3= plt.subplot(gs1[0, 2])
+ax4= plt.subplot(gs1[0, 3])
+'''
 gs2 = gridspec.GridSpec(1, 8)
 gs2.update(left=0.55, right=0.98, hspace=0.05)
 ax5 = plt.subplot(gs2[:, :8])
 sns.set_style('whitegrid')
 
 palette ={'week2':"C0",'week5':"C1"}
-
+'''
 
 sns.barplot(x='time', y = 'acc', data=acc_2,  ax=ax1, estimator=mean, ci=95, color='grey', \
             edgecolor='black')
