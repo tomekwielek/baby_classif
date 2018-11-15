@@ -102,7 +102,7 @@ f1_cross_cat_melt = pd.melt(f1_cross_cat, id_vars= 'time')
 
 
 #PLOT WITHIN
-gs1 = gridspec.GridSpec(1, 8)
+gs1 = gridspec.GridSpec(2, 4)
 gs1.update(left=0.1, right=0.48, wspace=0.05)
 ax1 = plt.subplot(gs1[:, :3])
 ax2 = plt.subplot(gs1[:, 3:4])
