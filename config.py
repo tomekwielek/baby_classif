@@ -6,9 +6,9 @@ stag_fname = 'H:\\BABY\\data\staging\\Stages_inklPrechtl_corrected.xlsx'
 report = 'H:\\BABY\\working\\report.html'
 from mne.report import Report
 report = Report(report)
+
+chs_incl = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4', 'ECG', 'EMG', 'HEOG_l', 'HEOG_r', 'VEOG'] #ref100 2heog
 #chs_incl = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4', 'ECG', 'EMG', 'HEOG', 'VEOG']
-#chs_incl = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4', 'ECG', 'EMG', 'HEOG_l', 'HEOG_r', 'VEOG']
-chs_incl = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4', 'ECG', 'EMG', 'HEOG', 'VEOG']
 
 #subjects - based on edf-s filenames [:5] bads excluded (see read_raw.py)
 subjects = ['104_2', '108_1', '108_2', '110_1', '110_2', '111_1',
@@ -29,6 +29,7 @@ pe_par = {'pet1m3' : {'embed':3, 'tau':1},
            'pet3m4' : {'embed':4, 'tau':3},
            'mspet1m3' : {'embed':3, 'tau':1},
             'mspet1m3_nofilt' : {'embed':3, 'tau':1},
+
            'mspet_ord1m3' : {'embed':3, 'tau':1},
            'pet1m3_stag_uncorr' : {'embed':3, 'tau':1},
            'pet3m3_stag_uncorr' : {'embed':3, 'tau':3},
@@ -39,7 +40,7 @@ pe_par = {'pet1m3' : {'embed':3, 'tau':1},
 bad_sbjs_1 = ['240_1', '235_1', '232_1', '226_1', '221_1', '220_1', '218_1', '214_1', '211_1', '236_1', \
                 '234_1', '231_1', '225_1', '224_1', '223_1', '222_1', '219_1', '216_1', '215_1', '212_1', \
                 '210_1', '209_1', '204_1', '203_1', '202_1', '118_1', '117_1']
-bad_sbjs_2 = ['111_2','112_2', '118_2', '119_2', '202_2', '204_2', '205_2', '206_2', '208_2', '209_2','215_2', '216_2',\
+bad_sbjs_2 = ['111_2','112_2', '113_2', '118_2', '119_2', '202_2', '204_2', '205_2', '206_2', '208_2', '209_2','215_2', '216_2',\
                 '218_2','219_2', '221_2', '222_2', '224_2', '225_2', '226_2', '227_2','234_2', '236_2', '238_2', '239_2', \
                     '231_2', '212_2', '214_2', '220_2', '232_2']
 
@@ -58,7 +59,8 @@ def paths(typ, c=None, sbj='sbj_av'):
         data_path=this_path,
         pet1m3= op.join(this_path, '%s.txt' % sbj),
         mspet1m3= op.join(this_path, '%s.txt' % sbj),
-        mspet1m3_nofilt= op.join(this_path, '%s.txt' % sbj),
+        mspet1m3_nofilt= op.join(this_path, '%s.txt' % sbj), #1eog no filt
+        mspet1m3_nofilt_ref100= op.join(this_path, '%s.txt' % sbj), #2eog no filt
         mspet_ord1m3= op.join(this_path, '%s.txt' % sbj),
         pet3m3= op.join(this_path, '%s.txt' % sbj),
         pet1m4= op.join(this_path, '%s.txt' % sbj),
@@ -67,7 +69,8 @@ def paths(typ, c=None, sbj='sbj_av'):
         pet3m3_stag_uncorr= op.join(this_path, '%s.txt' % sbj),
         pet1m4_stag_uncorr= op.join(this_path, '%s.txt' % sbj),
         psd = op.join(this_path, '%s.txt' % sbj),
-        psd_nofilt = op.join(this_path, '%s.txt' % sbj),
+        psd_nofilt = op.join(this_path, '%s.txt' % sbj), #1eog no filt
+        psd_nofilt_ref100 = op.join(this_path, '%s.txt' % sbj), #2eog no filt
         psd_notch = op.join(this_path, '%s.txt' % sbj),
         pet1m3_30hz = op.join(this_path, '%s.txt' % sbj),
         pred = op.join(this_path, '%s.txt' % sbj))
@@ -84,6 +87,7 @@ def myload(typ, sbj, c=None):
     fname = paths(typ=typ, c=c, sbj=sbj)
     if typ in ['pet1m3', 'pet3m3', 'pet1m4', 'pet3m4', 'pet1m3_stag_uncorr',
                 'pet3m3_stag_uncorr', 'pet1m4_stag_uncorr', 'mspet1m3','mspet1m3_nofilt', 'mspet_ord1m3',
+                'mspet1m3_nofilt_ref100', 'psd_nofilt_ref100',
                 'psd', 'psd_nofilt', 'psd_notch', 'pet1m3_30hz', 'pred']:
         with open(fname, 'rb') as f:
             #out = pickle.load(f, encoding='latin1')
@@ -102,7 +106,7 @@ def mysave(var, typ, sbj='sbj_av',  overwrite=True):
         return False
     elif typ in ['pet1m3', 'pet3m3', 'pet1m4', 'pet3m4', 'pet1m3_stag_uncorr',
                 'pet3m3_stag_uncorr', 'pet1m4_stag_uncorr', 'mspet1m3','mspet1m3_nofilt', 'mspet_ord1m3',
-                'psd', 'psd_nofilt', 'psd_notch', 'pet1m3_30hz', 'pred']:
+                'mspet1m3_nofilt_ref100', 'psd_nofilt_ref100', 'psd', 'psd_nofilt', 'psd_notch', 'pet1m3_30hz', 'pred']:
         with open(fname, 'wb') as f:
             pickle.dump(var, f)
     else:

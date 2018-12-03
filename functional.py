@@ -453,19 +453,20 @@ def load_single_append(path, fnames, typ):
     (differences of 1 due to windowing in pe computaton) and append a list'''
     freqs = None
     stag_list, pe_list, n_list = ([] for i in range(3))
+    counter = 0
     #if '236_2' in fnames: #stag- and pe- length in '236_2' does not match TODO
     #    fnames.remove('236_2')
     for s in fnames:
         #omit if filepath is empty
         if not os.path.isfile(paths(typ=typ, sbj=s)):
             print('Folder is empty')
-            print(s)
+            counter += 1
             continue
-        if typ == 'psd':
+        if typ in ['psd', 'psd_nofilt', 'psd_nofilt_ref100']:
             stag, pe, freqs = myload(typ=typ, sbj=s) # for psd load freqs bins
 
         else:
-            stag, pe = myload(typ=typ, sbj=s)
+            stag, pe= myload(typ=typ, sbj=s)
             #pe = pe[0:10, :] # single sbj has 11 channels, why? TODO
         if s in ['110_2']: #see annot by HL in excel; BL shorter
             stag = stag.iloc[:66]
@@ -483,7 +484,7 @@ def load_single_append(path, fnames, typ):
         stag_list.append(stag)
         pe_list.append(pe)
         n_list.append(s)
-
+    print('NO empty folder = {}'.format(str(counter)))
     return pe_list, stag_list, n_list, freqs
 
 def count_stag(stag):
@@ -671,15 +672,15 @@ def remove_20hz_artif(pe, psd, stag, names, freqs, bad_sbjs):
     iterate over mypsd, for bad_sbjs get frequencies in 20Hz, threshold, keep bad_e_idcs and remove epochs,
     use bad_e_idcs to update pe, stag, names
     '''
-    store_pe, store_psd, store_stag= [[] for i in range(3)]
+    store_pe, store_psd, store_stag, store_counter= [[] for i in range(4)]
     freqs = freqs.astype(int)
     idx_freq = np.where(freqs == 20)
     for idx_sbj, sbj in enumerate(names):
         if sbj in bad_sbjs:
-            print sbj
+            print(sbj)
             #plot_data(pe[idx_sbj], psd[idx_sbj], stag[idx_sbj], names_pe[idx_sbj])
             this_data = psd[idx_sbj][idx_freq,:,:][0]
-            idx_time = np.where(this_data[0,0,:] > np.percentile(this_data[0,0,:], 88))[0]
+            idx_time = np.where(this_data[0,0,:] > np.percentile(this_data[0,0,:], 90))[0]
             if sbj in ['236_2'] and 0 in idx_time:
                 idx_time = idx_time[1:] #see annot by HL in excel and functional.py; BL shorter
             mask_psd = np.ones(psd[idx_sbj].shape,dtype=bool)
@@ -688,14 +689,25 @@ def remove_20hz_artif(pe, psd, stag, names, freqs, bad_sbjs):
             mask_pe = np.ones(pe[idx_sbj].shape,dtype=bool)
             mask_pe[:,:,idx_time] = False
             pe_cor = pe[idx_sbj][mask_pe].reshape(pe[idx_sbj].shape[:2]+(-1,))
-            #set_trace()
             stag_cor = stag[idx_sbj].drop(idx_time, axis=0)
+            counter = len(idx_time)
             #plot_data(pe_cor, psd_cor, stag_cor, names[idx_sbj])
         else:
             pe_cor = pe[idx_sbj]
             psd_cor = psd[idx_sbj]
             stag_cor = stag[idx_sbj]
+            counter = 0
         store_pe.append(pe_cor)
         store_psd.append(psd_cor)
         store_stag.append(stag_cor)
-    return (store_pe, store_psd, store_stag)
+        store_counter.append(counter)
+    return (store_pe, store_psd, store_stag, store_counter)
+
+
+def get_unique_name_list(names1,names2):
+    '''
+    Take names from week2 and week5. Sort and return unique list of subjects names
+    '''
+    names1 = [names1[i].split('_')[0] for i in range(len(names1))]
+    names2 = [names2[i].split('_')[0] for i in range(len(names2))]
+    return sorted(list(set(names1 + names2)))

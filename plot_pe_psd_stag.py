@@ -73,8 +73,8 @@ pe, stag, n1, _ = load_single_append(path, fnames1, typ = 'mspet1m3')
 mypsd, stagpsd, n2, freqs =  load_single_append(path, fnames1, typ = 'psd')
 assert all([all(stagpsd[i] == stag[i]) for i in range(len(stag))])
 del stagpsd
-#pe, mypsd, stag = remove_20hz_artif(pe, mypsd, stag, n1, freqs, bad_sbjs_2)
-#pe, mypsd, stag = remove_20hz_artif(pe, mypsd, stag, n1, freqs, bad_sbjs_1)
+pe, mypsd, stag, _ = remove_20hz_artif(pe, mypsd, stag, n1, freqs, bad_sbjs_2)
+pe, mypsd, stag, _ = remove_20hz_artif(pe, mypsd, stag, n1, freqs, bad_sbjs_1)
 
 
 pe, stag, _ = select_class_to_classif(pe, stag, sel_idxs=sel_idxs)
@@ -95,4 +95,4 @@ for sbj in fnames1:
 #i = 8
 '''
 for i in range(len(pe)):
-    plot_data(pe[i], mypsd[i], stag[i], n1[i])
+    plot_data(pe[i], mypsd[i], stag[i], n2[i])

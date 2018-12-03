@@ -1,8 +1,10 @@
 
 #d_l = read.csv('H:\\BABY\\results\\perf_raw\\df_l.csv')
 #d_l = read.csv('H:\\BABY\\results\\perf_raw\\df_l.csv')
-d_l = read.csv('H:\\BABY\\results\\stat\\df_l.csv')
+#d_l = read.csv('H:\\BABY\\results\\stat\\df_l.csv')
+d_l = read.csv('H:\\BABY\\results\\old\\stat\\df_l_eps.csv')
 d_w = read.csv('H:\\BABY\\results\\stat\\df_w.csv')
+
 if(!require(psych)){install.packages("psych")}
 if(!require(nlme)){install.packages("nlme")}
 if(!require(car)){install.packages("car")}

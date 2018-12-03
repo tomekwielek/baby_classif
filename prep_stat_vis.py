@@ -25,7 +25,7 @@ def get_data_wrap(fnames, merge):
         pe, stag, sbj_names, _ = load_single_append(base_path, fnames, typ = setup)
     elif setup == 'psd':
         pe, stag, sbj_names, freqs = load_single_append(base_path, fnames, typ = setup)
-    pe, stag = select_class_to_classif(pe, stag, sel_idxs=sel_idxs)
+    pe, stag, _ = select_class_to_classif(pe, stag, sel_idxs=sel_idxs)
     if merge:
         stag_m = [stag[i].iloc[:,[0]].replace(mapper, inplace=False).astype(float) \
             for i in range(len(stag))]
@@ -112,8 +112,8 @@ def plot_descriptive(av, uniq_stag, count):
     plt.suptitle('')
     plt.show()
 
-#av, av_melt, = prepare_data(peall, stagall)
-#av_melt['value'] = pd.to_numeric(av_melt['value'])# get numerc type
+av, av_melt, = prepare_data(peall, stagall)
+av_melt['value'] = pd.to_numeric(av_melt['value'])# get numerc type
 
 #av.to_csv('df_w.csv')
 
@@ -145,7 +145,6 @@ df_melt = pd.concat([df_melt_with_time_id, df_melt_with_name_id], axis=1, join='
 df_melt = df_melt.loc[:,~df_melt.columns.duplicated()] #drop duplicated columns
 df_melt['name_id_short'] =  [df_melt['name_id'].iloc[i][0:3] for i in range(len(df_melt))]
 '''
-
 #create long format for pe avergaed  across channels AND k number of randomly sampled epochs
 def pe_stag_time_names(pe, stag, sel_idxs):
     k = 5 #sample size of sample epochs
@@ -172,4 +171,5 @@ def pe_stag_time_names(pe, stag, sel_idxs):
 list_dfs = [pe_stag_time_names(peall[i], stagall[i], sel_idxs) for i in range(len(peall))]
 
 df = pd.concat(list_dfs)
-df.to_csv('df_l_eps.csv')
+sns.factorplot(x='stag', y='value', hue='time_id', data=df)
+#df.to_csv('df_l_eps.csv')
