@@ -15,7 +15,7 @@ def my_load(fname):
     path = results_path + 'scores' + '\\acc_f1indiv\\' + fname
     scores = read_pickle(path)
     return scores
-
+'''
 fnames_dict = {'five' : ({'perf' : 'mspe5_acc_prec_rec.txt'},
                             {'idx' : (1,1)}),
             'two' : ({'perf' : 'mspe2_acc_prec_rec.txt'},
@@ -31,11 +31,27 @@ fnames_dict = {'five' : ({'perf' : 'mspe5_acc_prec_rec.txt'},
             'null_two2five' : ({'perf' : 'null_two2five.txt'},
                                         {'idx' : (1,1)}),
             'null_five2two' : ({'perf' : 'null_five2two.txt'},
-                                        {'idx' : (1,1)})
+                                        {'idx' : (1,1)})         }
+'''
 
+fnames_dict = {'five' : ({'perf' : 'mspe5_searched_scores.txt'},
+                            {'idx' : (1,1)}),
+                'two' : ({'perf' : 'mspe2_searched_scores.txt'},
+                                            {'idx' : (0,1)}),
+                'null_five' : ({'perf' : 'null_perf_5.txt'},
+                                            {'idx' : (1,1)}),
+                'null_two' : ({'perf' : 'null_perf_2.txt'},
+                                            {'idx' : (1,1)}),
+                'two2five' : ({'perf' : 'mspe25_cat_searched_scores.txt'},
+                                            {'idx' : (0,1)}),
+                'five2two' : ({'perf' : 'mspe52_cat_searched_scores.txt'},
+                                                        {'idx' : (0,1)}),
+                'null_two2five' : ({'perf' : 'null_two2five.txt'},
+                                            {'idx' : (1,1)}),
+                'null_five2two' : ({'perf' : 'null_five2two.txt'},
+                                            {'idx' : (1,1)})
+                            }
 
-                 }
-#FIVE
 perf_5 = my_load(fnames_dict['five'][0]['perf'])
 acc_5 = np.asarray([perf_5[i][0] for i in range(len(perf_5))]) * 100
 cm5 =  np.asarray([perf_5[i][1] for i in range(len(perf_5))]).mean(0)
@@ -102,85 +118,52 @@ f1_cross_cat_melt = pd.melt(f1_cross_cat, id_vars= 'time')
 
 
 #PLOT WITHIN
-gs1 = gridspec.GridSpec(1, 8)
-gs1.update(left=0.1, right=0.48, wspace=0.05)
-ax1 = plt.subplot(gs1[:, :3])
-ax2 = plt.subplot(gs1[:, 3:4])
-ax3= plt.subplot(gs1[:, 4:7])
-ax4= plt.subplot(gs1[:, 7:8])
-gs2 = gridspec.GridSpec(1, 8)
-gs2.update(left=0.55, right=0.98, hspace=0.05)
-ax5 = plt.subplot(gs2[:, :8])
-sns.set_style('whitegrid')
+def plot_mygrid(data2, data5, null2, null5, df, myxticklab ):
+    fig = plt.figure(figsize=(4,5))
+    gs1 = gridspec.GridSpec(2, 8, figure=fig)
+    gs1.update(right=0.75, wspace=0.1)
+    ax1 = plt.subplot(gs1[0, :3])
+    ax2 = plt.subplot(gs1[0, 3:4])
+    ax3= plt.subplot(gs1[0, 4:7])
+    ax4= plt.subplot(gs1[0, 7:8])
+    ax5= plt.subplot(gs1[1, :])
 
-palette ={'week2':"C0",'week5':"C1"}
+    sns.barplot(x='time', y = 'acc', data=data2,  ax=ax1, estimator=mean, ci=95, color='grey', \
+                edgecolor='black')
+    ax1.axhline(y=mean(null2.ravel()), linestyle='--', color='red', alpha=0.5)
+    ax2.hist(null2.ravel(), bins=20, orientation='horizontal', color='darkgrey', edgecolor='black')
 
+    sns.barplot(x='time', y = 'acc', data=data5,  ax=ax3, estimator=mean, ci=95, color='grey', \
+                edgecolor='black')
+    ax3.axhline(y=mean(null5.ravel()), linestyle='--', color='red', alpha=0.5)
+    ax4.hist(null5.ravel(), orientation='horizontal', bins=12, color='darkgrey', edgecolor='black')
 
-sns.barplot(x='time', y = 'acc', data=acc_2,  ax=ax1, estimator=mean, ci=95, color='grey', \
-            edgecolor='black')
-ax1.axhline(y=mean(null_acc_2.ravel()), linestyle='--', color='black', alpha=0.5)
-ax2.hist(null_acc_2.ravel(), bins=20, orientation='horizontal', color='darkgrey', edgecolor='black')
+    sns.barplot(x='time', y = 'value', hue='variable', data=df,  ax=ax5, estimator=mean,
+                ci=95, edgecolor='black')
 
+    ax1.set(ylim=[0,90], xlabel='',  ylabel='Accuracy [%]', xticklabels=[],  xticks=[], \
+            yticklabels=range(0,90,10),  yticks=range(0,90,10))
+    ax1.yaxis.grid(color='gray', linestyle='dashed')
+    ax2.set(ylim=[0,90],  xlabel='', yticklabels=[],  xticks=[],   yticks=range(0,90,10))
+    ax3.set(ylim=[0,90], xlabel='', ylabel='', xticks=[], xticklabels=[], \
+            yticklabels=[],  yticks=range(0,90,10))
+    ax3.yaxis.grid(color='gray', linestyle='dashed')
+    ax4.set(ylim=[0,90],  xlabel='', yticklabels=[], xticks=[],  yticks=range(0,90,10))
+    ax5.set_axisbelow(True)
+    ax5.yaxis.grid(color='gray', linestyle='dashed')
+    ax5.set(ylim=[0,90], ylabel='F1 [%]', xlabel='', xticks=[0,1], yticklabels=range(0,90,10),  yticks=range(0,90,10),\
+            xticklabels=myxticklab)
+    ax5.legend(prop=dict(size=12))
+    legend_elements = [Line2D([0], [0], color='red', lw=2, alpha=0.5, label='Chance', linestyle='--')]
+    #ax1.legend(handles=legend_elements, loc='best', prop={'size': 8})
+    ax4.legend(handles=legend_elements, bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
+    plt.setp(ax5.get_legend().get_texts(), fontsize='8')
+    ax5.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
 
-sns.barplot(x='time', y = 'acc', data=acc_5,  ax=ax3, estimator=mean, ci=95, color='grey', \
-            edgecolor='black')
-ax3.axhline(y=mean(null_acc_5.ravel()), linestyle='--', color='black', alpha=0.5)
-ax4.hist(null_acc_5.ravel(), orientation='horizontal', bins=12, color='darkgrey', edgecolor='black')
-
-sns.barplot(x='time', y = 'value', hue='variable', data=f1_cat_melt,  ax=ax5, estimator=mean,
-            ci=95, edgecolor='black')
-
-ax1.set(ylim=[0,90], xlabel='',  ylabel='Accuracy [%]', xticks=[0.3], xticklabels=['week2'])
-ax2.set(ylim=[0,90],  xlabel='', yticklabels=[],  xticks=[])
-ax3.set(ylim=[0,90], yticklabels=[], xlabel='', ylabel='', xticks=[0.3], xticklabels=['week5'])
-ax4.set(ylim=[0,90],  xlabel='', yticklabels=[], xticks=[])
-ax5.set(ylim=[0,90], ylabel='F1 [%]', xlabel='', yticklabels=[], xticks=[0,1], \
-        xticklabels=['week2', 'week5'])
-ax5.legend(prop=dict(size=12))
-legend_elements = [Line2D([0], [0], color='grey', lw=2, label='Chance', linestyle='--')]
-ax1.legend(handles=legend_elements, loc='best', prop={'size': 8})
-
-
-
-#PLOT CROSS
-gs1 = gridspec.GridSpec(1, 8)
-gs1.update(left=0.1, right=0.48, wspace=0.05)
-ax1 = plt.subplot(gs1[:, :3])
-ax2 = plt.subplot(gs1[:, 3:4])
-ax3= plt.subplot(gs1[:, 4:7])
-ax4= plt.subplot(gs1[:, 7:8])
-gs2 = gridspec.GridSpec(1, 8)
-gs2.update(left=0.55, right=0.98, hspace=0.05)
-ax5 = plt.subplot(gs2[:, :8])
-sns.set_style('whitegrid')
-
-palette ={'week2':"C0",'week5':"C1"}
-
-
-sns.barplot(x='time', y = 'acc', data=acc_52,  ax=ax1, estimator=mean, ci=95, color='grey', \
-            edgecolor='black')
-ax1.axhline(y=mean(null_acc_52.ravel()), linestyle='--', color='black', alpha=0.5)
-ax2.hist(null_acc_52.ravel(), bins=20, orientation='horizontal', color='darkgrey', edgecolor='black')
-
-sns.barplot(x='time', y = 'acc', data=acc_25,  ax=ax3, estimator=mean, ci=95, color='grey', \
-            edgecolor='black')
-ax3.axhline(y=mean(null_acc_25.ravel()), linestyle='--', color='black', alpha=0.5)
-ax4.hist(null_acc_25.ravel(), orientation='horizontal', bins=20, color='darkgrey', edgecolor='black')
-
-sns.barplot(x='time', y = 'value', hue='variable', data=f1_cross_cat_melt,  ax=ax5, estimator=mean,
-            ci=95, edgecolor='black')
-
-ax1.set(ylim=[0,90], xlabel='',  ylabel='Accuracy [%]', xticks=[0.3], xticklabels=['week2'])
-ax2.set(ylim=[0,90],  xlabel='', yticklabels=[],  xticks=[])
-ax3.set(ylim=[0,90], yticklabels=[], xlabel='', ylabel='', xticks=[0.3], xticklabels=['week5'])
-ax4.set(ylim=[0,90],  xlabel='', yticklabels=[], xticks=[])
-ax5.set(ylim=[0,90], ylabel='F1 [%]', xlabel='', yticklabels=[], xticks=[0,1], \
-        xticklabels=['week2', 'week5'])
-ax5.legend(prop=dict(size=12))
-legend_elements = [Line2D([0], [0], color='grey', lw=2, label='Chance', linestyle='--')]
-ax1.legend(handles=legend_elements, loc='best', prop={'size': 8})
-
-
+#plot within
+plot_mygrid(acc_2, acc_5, null_acc_2, null_acc_5, f1_cat_melt, myxticklab=['week2->week2', 'week5->week5'])
+#plot cross
+plot_mygrid(acc_52, acc_25, null_acc_52, null_acc_25, f1_cross_cat_melt,  myxticklab=['week5->week2', 'week2->week5'])
 
 
 
@@ -291,7 +274,19 @@ matplotlib.rcParams.update({'font.size': 15})
 U, pval = mann(df['five'], df['two2five'])
 print pval
 
-
 #plot xonfusion matrix for week 2 and week 5
 plot_confusion_matrix(cm2, ['NREM', 'REM', 'WAKE'], title='', normalize=True)
 plot_confusion_matrix(cm5, ['NREM', 'REM', 'WAKE'], title='', normalize=True)
+
+
+#F1 scoresce stat
+df = pd.concat([acc_25, acc_52])
+U, pval = mann(df['REM'][df['time']=='week2'], \
+        df['REM'][df['time']=='week5'])
+print pval
+
+# Acc scores stat
+df = pd.concat([acc_25, acc_52])
+U, pval = mann(df['acc'][df['time']=='week2'], \
+        df['acc'][df['time']=='week5'])
+print pval

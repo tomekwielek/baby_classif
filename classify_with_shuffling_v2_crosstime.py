@@ -32,23 +32,23 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
 
 
     if search == True:
-        clf = ExtraTreesClassifier()
+        clf = RandomForestClassifier()
     else:
-        clf = ExtraTreesClassifier(600, n_jobs=-1) #NO search
+        clf = RandomForestClassifier(600, n_jobs=-1) #NO search
 
     #external cv,
     kf = RepeatedKFold(n_splits=n_folds, n_repeats=10, random_state=11)
 
     #internal cv
-    sskf = StratifiedShuffleSplit(n_splits=5, test_size=0.3, random_state=111)
+    sskf = StratifiedShuffleSplit(n_splits=5, test_size=0.5, random_state=111)
 
     #Parameters to optimize (random search)
-    n_estimators = [int(x) for x in np.linspace(start=100, stop=1000, num=10)]
+    n_estimators = [int(x) for x in np.linspace(start=50, stop=1000, num=10)]
     max_features = ['auto', 'sqrt']
-    max_depth = [int(x) for x in np.linspace(10, 110, num = 10)]
+    max_depth = [int(x) for x in np.linspace(10, 110, num = 15)]
     max_depth.append(None)
-    min_samples_split = [2, 5, 10]
-    min_samples_leaf = [1, 2, 4]
+    min_samples_split = [2, 5, 10, 20]
+    min_samples_leaf = [1, 2, 4, 8]
     bootstrap = [True, False]
 
     # Create the random grid
