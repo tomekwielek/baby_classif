@@ -25,8 +25,8 @@ fnames1 = [f for f in fnames if f.endswith('1')]
 fnames2 = [f for f in fnames if f.endswith('2')] #filter folders
 
 sel_idxs = [1,2,3]
-select_single_channel = 'O2' #'O1' #'O2' #specify channel to select
-k= 'all' # epochs to average
+select_single_channel = False #'O2' #'O1' #'O2' #specify channel to select
+k= 10 #4 # epochs to average
 balance_sbjs_across_groups = False #if True sample 12 estimates from each group (e,g week2 NREM)
 
 store_scores = dict()
@@ -44,7 +44,8 @@ del (psd_stag1, psd_stag2)
 mspe1, psd1, stag1, _ = remove_20hz_artif(mspe1, psd1, mspe_stag1, mspe_names1, freqs, bad_sbjs_1)
 mspe2, psd2, stag2, _ = remove_20hz_artif(mspe2, psd2, mspe_stag2, mspe_names2, freqs, bad_sbjs_2)
 
-# Relative power see: Xiao(2018)
+# Relative power see: Xiao(2018) 'Electroencephalography power and coherence changes with age and motor skill'
+development across the first half year of life
 rel_psd1 = [psd1[i] / np.abs(np.sum(psd1[i], 0)) for i in range(len(psd1))]
 rel_psd1 = [ np.log10(rel_psd1[i]) for i in range(len(psd1)) ]
 rel_psd2 = [psd2[i] / np.abs(np.sum(psd2[i], 0)) for i in range(len(psd2))]
@@ -66,6 +67,7 @@ def av_channels_epochs(data, stag, what_stag, names):
     Function agragates across epochs and/or channels
     '''
     #select data corr with given sleep stage s
+    np.random.seed(123)
     av_stag = [data[i][:,:, np.where(stag[i]['numeric'] == what_stag)] for i in range(len(data))]
     names_ss = [ names[i] for i in range(len(av_stag)) if av_stag[i].size != 0 ]
     if k != 'all': #average k number of epochs
@@ -96,7 +98,7 @@ def iterate_stages_getdict(data, stag, sel_idxs, names):
         channels_aved = [ channels_aved[i] for i in range(len(channels_aved)) if not np.isnan(channels_aved[i][0]) ]
         #sample 12, count(week2 NREM) = 12
         if balance_sbjs_across_groups:
-            random.Random(123).shuffle(channels_aved)
+            random.Random(12).shuffle(channels_aved)
             channels_aved = channels_aved[:12]
             found_names =  [[] for i in range(12)]
  #when balancing skip names
@@ -134,6 +136,9 @@ def wrap_together_df(mydict):
 
     df = pd.concat(dfs, 0)
     return df
+
+###################################################################################################
+
 # pandas PSD
 df1 = wrap_together_df(mydict1)
 df1 = df1.dropna()
@@ -175,23 +180,19 @@ def get_stats(group):
 def get_overlap(a, b):
     return max(0, min(a[1], b[1]) - max(a[0], b[0]))
 
-'''
 #testing, check grouping from  group by
-g = df.groupby(['time', 'stag'])
-result = [g_[1] for g_ in list(g)]
-names = [g_[0] for g_ in list(g)]
-av_res = list(result[0].mean(0))
-'''
+#g = df.groupby(['time', 'stag'])
+#result = [g_[1] for g_ in list(g)]
+#names = [g_[0] for g_ in list(g)]
+#av_res = list(result[0].mean(0))
 
 
 av = df.groupby(['time', 'stag']).aggregate(lambda x: np.mean(x)).reset_index()
-'''
+
 #get summary
-df_long[df_long['variable']==0].groupby(['time', 'stag']).apply(get_stats).unstack()
+#df_long[df_long['variable']==0].groupby(['time', 'stag']).apply(get_stats).unstack()
+#df.groupby(['time', 'stag']).aggregate(lambda x: boot_conf_int_mean(x)).reset_index()
 
-
-df.groupby(['time', 'stag']).aggregate(lambda x: boot_conf_int_mean(x)).reset_index()
-'''
 #ci = df.groupby(['time', 'stag']).aggregate(lambda x: boot_conf_int_mean(x)).reset_index()
 #ci = df.groupby(['time', 'stag']).aggregate(lambda x: get_IQR(x)).reset_index()
 ci = df.groupby(['time', 'stag']).aggregate(lambda x: boot_conf_int_mean(x)).reset_index()
@@ -224,14 +225,16 @@ for idx, s in enumerate(['nrem', 'rem', 'wake']):
         axes[idx].set(xticks=old_ticks[::10], xticklabels=freqs.astype(int)[::10])
         axes[idx].set_title(s.upper(), fontsize=12)
         axes[idx].set_xlabel('Freqs [Hz]', fontsize=16)
-        axes[idx].yaxis.set_ticklabels([])
+        #axes[idx].yaxis.set_ticklabels([])
         axes[0].set_ylabel('Log Relative Power', fontsize=20)
-    #overlap =[ get_overlap(dict_intervals[('2week', s)].values[i],dict_intervals[('5week', s)].values[i])
+    #overlap =[ get_overlap(dict_intervals[('2week', s)].values[i], dict_intervals[('5week', s)].values[i])
     #            for i in range(len(freqs)) ]
-    #overlap = np.array([ overlap[j] == 0 for j in range(len(freqs)) ], dtype=int)
+    overlap =[ get_overlap(dict_intervals[('2week', s)][i], dict_intervals[('5week', s)][i])
+                for i in range(len(freqs)) ]
+    overlap = np.array([ overlap[j] == 0 for j in range(len(freqs)) ], dtype=int)
     #mask overlapping intervals
-    #y_values_masked = np.ma.masked_where(overlap == 0 , overlap)
-    #axes[idx].plot(y_values_masked * -4, marker='o', c='black')
+    y_values_masked = np.ma.masked_where(overlap == 0 , overlap)
+    axes[idx].plot(y_values_masked * -4, marker='_', c='red')
     if select_single_channel is not False:
         fig.suptitle(select_single_channel, size=18)
 
@@ -244,6 +247,7 @@ plt.legend(custom_lines,texts,bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.,
             prop={'size': 14}, title = '95% boot.ci. for median PSD').get_frame()
 plt.show()
 
+##################################################################################################
 #MSPE PLOTTING
 #pands MSPE
 df1 = wrap_together_df(mydict1_mspe)
@@ -262,7 +266,7 @@ df_wide_psd = pd.concat([df1, df2], sort=True)
 #names without time suffiux
 #df_long['sbj_id']=  [df_long['sbj_id'].iloc[i].split('_')[0] for i in range(len(df_long))]
 
-df_long.to_csv('{}_mspe.csv'.format(select_single_channel))
+df_long.to_csv('{}_mspe.csv'.format('False2'))
 
 def plot_stages_time_hued(df):
     fig, axes = plt.subplots(1,3, sharey=True, figsize = (10,5))

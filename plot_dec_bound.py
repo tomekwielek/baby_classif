@@ -47,8 +47,8 @@ assert all([all(mspe_stag1[i] == psd_stag1[i]) for i in range(len(psd_stag1))])
 assert all([all(mspe_stag2[i] == psd_stag2[i]) for i in range(len(psd_stag2))])
 del (psd_stag1, psd_stag2)
 
-mspe1, psd1, stag1 = remove_20hz_artif(mspe1, psd1, mspe_stag1, mspe_names1, freqs, bad_sbjs_1)
-mspe2, psd2, stag2 = remove_20hz_artif(mspe2, psd2, mspe_stag2, mspe_names2, freqs, bad_sbjs_2)
+mspe1, psd1, stag1,_ = remove_20hz_artif(mspe1, psd1, mspe_stag1, mspe_names1, freqs, bad_sbjs_1)
+mspe2, psd2, stag2, _ = remove_20hz_artif(mspe2, psd2, mspe_stag2, mspe_names2, freqs, bad_sbjs_2)
 
 mspe1, stag1, _ = select_class_to_classif(mspe1, stag1, sel_idxs=sel_idxs)
 mspe2, stag2, _ = select_class_to_classif(mspe2, stag2, sel_idxs=sel_idxs)
@@ -94,10 +94,10 @@ for _, out_idx in kf.split(range(no_sbjs)):
     no_samples =  dict([(1, 100), (2, 100), (3, 100)])
     rus = RandomUnderSampler(random_state=0, ratio=no_samples)
     rus.fit(X_train, y_train)
-    X_train, y_train = rus.sample(X_train, y_train)
+    X_train, y_train = rus.fit_resample(X_train, y_train)
     rus = RandomUnderSampler(random_state=0, ratio=no_samples)
     rus.fit(X_test, y_test)
-    X_test, y_test = rus.sample(X_test, y_test)
+    X_test, y_test = rus.fit_resample(X_test, y_test)
 
     X_train_embedded = MDS(n_components=2).fit_transform(X_test)
     #X_train_embedded = TSNE(n_components=2).fit_transform(X_test)
@@ -119,7 +119,7 @@ for _, out_idx in kf.split(range(no_sbjs)):
     voronoiBackground = voronoiBackground.reshape((resolution, resolution))
 
     #plot
-    colors_dict ={1: 'red', 2:'green', 3:'blue'}
+    colors_dict ={1: 'red', 2:'grey', 3:'blue'}
     colors = [colors_dict[y_test[i]] for i in range(len(y_test)) ]
 
     plt.contourf(xx, yy, voronoiBackground, cmap='RdBu', linewidths=2, alpha=0.5)
@@ -138,7 +138,7 @@ for _, out_idx in kf.split(range(no_sbjs)):
             p.set_transform(trans)
             return [p]
 
-    colors = colors_dict.values()
+    colors = list(colors_dict.values())
     texts = ['NREM', 'REM', 'WAKE']
     c = [ mpatches.Circle((0.5, 0.5), radius = 0.25, facecolor=colors[i], edgecolor="none" ) for i in range(len(texts))]
     plt.legend(c,texts,bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0., ncol=1,
@@ -159,13 +159,16 @@ imps = imps.mean(1) #av scales
 imps_sorted_idx = np.argsort(imps.mean(0))[::-1]
 imps_df = pd.DataFrame(imps, columns=chs_incl)
 imps_df = pd.melt(imps_df)
-pal = sns.color_palette('Blues_d', n_colors=len(chs_incl))
-sns.barplot( x='variable', y='value', data=imps_df, palette=pal,
-                order=np.asarray(chs_incl)[imps_sorted_idx])
+#pal = sns.color_palette('Blues_d', n_colors=len(chs_incl))
+chs_ordered = np.asarray(chs_incl)[imps_sorted_idx]
+colors  = ['grey' if c in ['F3', 'C3', 'O1', 'O2', 'C4', 'F4',] else 'lightgrey' for _, c in enumerate(chs_ordered)]
+#color = [x for x, _ in sorted(zip(color,imps_sorted_idx), key=lambda x: x[1])]
+sns.barplot( x='variable', y='value', data=imps_df, palette = colors, #palette=pal,
+                order=chs_ordered)
 ax = plt.gca()
 ax.set_ylabel('Relative importance', fontsize=20)
 ax.set_xlabel('')
-ax.set_xticklabels(np.asarray(chs_incl)[imps_sorted_idx], rotation=45,fontsize=16)
+ax.set_xticklabels(chs_ordered, rotation=45,fontsize=16)
 plt.show()
 '''
 # GET FULL DATASET no cv

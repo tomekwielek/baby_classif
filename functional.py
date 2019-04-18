@@ -462,7 +462,7 @@ def load_single_append(path, fnames, typ):
             print('Folder is empty')
             counter += 1
             continue
-        if typ in ['psd', 'psd_nofilt', 'psd_nofilt_ref100']:
+        if typ in ['psd', 'psd_nofilt', 'psd_nofilt_ref100', 'psd_hd']:
             stag, pe, freqs = myload(typ=typ, sbj=s) # for psd load freqs bins
 
         else:
@@ -480,6 +480,7 @@ def load_single_append(path, fnames, typ):
         print(s)
         print (len(stag))
         print (pe.shape[1])
+        #set_trace()
         assert len(stag) == pe.shape[-1]
         stag_list.append(stag)
         pe_list.append(pe)
@@ -559,7 +560,7 @@ def write_pickle(d, save_name):
 def read_pickle(saved_name):
     import pickle
     with open(saved_name, 'rb') as f:
-        d = pickle.load(f)#, encoding='latin1')
+        d = pickle.load(f, encoding='latin1')
     return d
 
 
@@ -583,7 +584,7 @@ def plot_confusion_matrix(cm,  classes,
     print(cm)
     plt.figure()
     plt.imshow(cm, interpolation='nearest', cmap=cmap, vmin=0, vmax=0.8)
-    #plt.title(title)
+    plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45, fontsize=14)
@@ -687,6 +688,7 @@ def remove_20hz_artif(pe, psd, stag, names, freqs, bad_sbjs):
             mask_psd[:,:,idx_time] = False
             psd_cor = psd[idx_sbj][mask_psd].reshape(psd[idx_sbj].shape[:2]+(-1,))
             mask_pe = np.ones(pe[idx_sbj].shape,dtype=bool)
+            #set_trace()
             mask_pe[:,:,idx_time] = False
             pe_cor = pe[idx_sbj][mask_pe].reshape(pe[idx_sbj].shape[:2]+(-1,))
             stag_cor = stag[idx_sbj].drop(idx_time, axis=0)

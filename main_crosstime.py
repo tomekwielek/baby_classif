@@ -22,7 +22,7 @@ fnames1 = [f for f in fnames if f.endswith('1')]
 fnames2 = [f for f in fnames if f.endswith('2')] #filter folders
 sel_idxs = [1,2,3]
 n_folds = 2
-five2two = True #if True cross gen: 5weeks - 2weeks otherwise the oposite
+five2two = False #if True cross gen: 5weeks - 2weeks otherwise the oposite
 #setup = 'psd'
 setup = 'mspet1m3'
 store_perfs = []
@@ -77,4 +77,20 @@ perf = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, myshow=False, \
 
 print np.asarray([perf[i][0] for i in range(len(perf))]).mean()
 
-write_pickle(perf, 'mspe52_cat_searched_scores.txt')
+#write_pickle(perf, 'mspe52_cat_searched_scores.txt')
+
+#Run shuffling
+nulliter  = 100
+null_perfs = []
+
+for idx in range(nulliter):
+    perf_n = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, myshow=False, \
+                        check_mspe=True, null=True, n_folds=n_folds, five2two=five2two, search=False)
+    print(idx)
+    null_perfs.append(perf_n)
+
+write_pickle(null_perfs, 'null_week25.txt')
+
+
+d = read_pickle('null_week5.txt')
+dd = np.asarray([np.asarray([d[i][j][3] for j in range(len(d[0]))]) for i in range(len(d))])

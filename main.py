@@ -37,8 +37,8 @@ store_perfs = []
 #for i in range(2):
 s = 5 #taus no
 
-mspe1, mspe_stag1, mspe_names1, _ = load_single_append(path, fnames1, typ='pet1m3')
-mspe2, mspe_stag2, mspe_names2, _ = load_single_append(path, fnames2, typ='pet1m3')
+mspe1, mspe_stag1, mspe_names1, _ = load_single_append(path, fnames1, typ='mspet1m3')
+mspe2, mspe_stag2, mspe_names2, _ = load_single_append(path, fnames2, typ='mspet1m3')
 psd1, psd_stag1, psd_names1, freqs = load_single_append(path, fnames1, typ='psd')
 psd2, psd_stag2, psd_names2, freqs = load_single_append(path, fnames2, typ='psd')
 
@@ -138,16 +138,17 @@ print np.asarray([perf[i][0] for i in range(len(perf))]).mean()
 
 
 
-'''
 #Run shuffling
 nulliter  = 100
 null_perfs = []
 
 for idx in range(nulliter):
-    perf_n = classify_shuffle(data_pe, data_stag, myshow=False, check_mspe=True, \
+    perf_n = classify_shuffle(data_pe, data_stag, idx_plot, myshow=False, check_mspe=True, \
                                 null=True, n_folds=n_folds, search=False)
     print(idx)
     null_perfs.append(perf_n)
 
-write_pickle(null_perfs, 'psd_cat_null.txt')
-'''
+write_pickle(null_perfs, 'null_week5.txt')
+
+d = read_pickle('psd_cat_null_week5.txt')
+dd = np.asarray([np.asarray([d[i][j][2] for j in range(len(d[0]))]) for i in range(len(d))])

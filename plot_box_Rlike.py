@@ -9,15 +9,16 @@ import matplotlib.gridspec as gridspec
 from numpy import mean
 from matplotlib.patches import Patch
 
+
 #df = pd.read_csv('H:\\BABY\\results\\old\\stat\\df_l_eps.csv')
-df = pd.read_csv('H:\\BABY\\results\\O2_mspe.csv')
+df = pd.read_csv('H:\\BABY\\results\\mspe_allsbjs_alleeg_10epochs.csv')
 #df = pd.read_csv('mspe.csv')
 
 #drop 213 physio flat, see subjects_used.xlsx
 #df = df[df['name_id_short'] != 213] #for PE analysis only
 #df = df.dropna()
 
-df = df[df['variable'] == 0]
+df = df[df['variable'] == 4]
 
 fig, ax = plt.subplots()
 box = sns.boxplot(x='stag', y='value', hue='time',data=df, linewidth=3, \
@@ -48,16 +49,23 @@ legend_elements = [Patch(facecolor='white', edgecolor='black',
                     Patch(facecolor='white', edgecolor='red',
                         label='week 5', linewidth=3)]
 ax.legend(handles=legend_elements, loc='lower right')
-ax.set(ylabel= 'PE', xlabel='', xticklabels= ['NREM', 'REM', 'WAKE'], ylim=[1.22, 1.68])
-'''
-ax.plot([-0.2, -0.2, 0.2, 0.2], [1.63, 1.64, 1.64, 1.63], linewidth=1, color='black')
-ax.plot([0.8, 0.8, 1.2, 1.2], [1.63, 1.64, 1.64, 1.63], linewidth=1, color='black')
-ax.plot([1.8, 1.8, 2.2, 2.2], [1.63, 1.64, 1.64, 1.63], linewidth=1, color='black')
-ax.text(-0.07, 1.645, 'p<.05', color='black', size=10)
-ax.text(0.93, 1.645, 'p<.05', color='black', size=10)
-ax.text(1.95, 1.645, 'ns', color='black', size=10)
-'''
+#ax.set(ylabel= 'MSPE(scale=5)', xlabel='', xticklabels= ['NREM', 'REM', 'WAKE'], ylim=[1.2, 1.68])
+ax.set(ylabel= 'MSPE(scale=4)', xlabel='', xticklabels= ['NREM', 'REM', 'WAKE'], ylim=[1.38, 1.71])
+
+#ax.plot([-0.2, -0.2, 0.2, 0.2], [1.63, 1.64, 1.64, 1.63], linewidth=1, color='black')
+ax.plot([-0.2, -0.2, 0.2, 0.2], [1.67, 1.68, 1.68, 1.67], linewidth=1, color='black')
+#ax.plot([0.8, 0.8, 1.2, 1.2], [1.63, 1.64, 1.64, 1.63], linewidth=1, color='black')
+ax.plot([0.8, 0.8, 1.2, 1.2], [1.67, 1.68, 1.68, 1.67], linewidth=1, color='black')
+#ax.plot([1.8, 1.8, 2.2, 2.2], [1.63, 1.64, 1.64, 1.63], linewidth=1, color='black')
+ax.plot([1.8, 1.8, 2.2, 2.2], [1.67, 1.68, 1.68, 1.67], linewidth=1, color='black')
+#ax.text(-0.07, 1.645, 'p<.05', color='black', size=10)
+#ax.text(0.93, 1.645, 'p<.05', color='black', size=10)
+#ax.text(1.95, 1.645, 'ns', color='black', size=10)
+ax.text(-0.07, 1.685, 'p<.05', color='black', size=10)
+ax.text(0.93, 1.685, 'p=.06', color='black', size=10)
+ax.text(1.95, 1.685, 'ns', color='black', size=10)
 plt.rcParams.update({'font.size': 15})
+#pyplot.locator_params(axis='y', nbins=8)
 plt.show()
 
 

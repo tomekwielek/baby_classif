@@ -68,3 +68,17 @@ s = s.drop(s.columns[[0, 1, 2]], axis=1) #drop cols like 'Condition', 'Minuten',
 idfs = map_stag_with_raw(fnames, s=s, sufx='ref100')
 idfs = {i : v for i, v in idfs.items() if len(v) >= 1} # drop empty
 idfs = {i : v for i, v in idfs.items() if 'P' not in i} # drop Prechtls
+
+##########################################################
+#PLOT hist for pe patterns
+import matplotlib.pyplot as plt
+plt.rcParams.update({'font.size': 16})
+y = [0.3, 0.1, 0.15, 0.1, 0.15, 0.2]
+x= range(6)
+f, ax = plt.subplots()
+ax.bar(x,y, color='white', edgecolor='black', linewidth=2, width=.6, align='center')
+ax.set(yticks=[0, 0.3], ylabel='Probability of occurrence (p)', xticklabels =
+            ['', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'])
+colors = ['black','red', 'blue','green', 'black', 'orange','darkblue']
+for xtick, color in zip(ax.get_xticklabels(), colors):
+    xtick.set_color(color)

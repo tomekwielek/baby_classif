@@ -1,4 +1,5 @@
 #The right script! similar to mixed_anova (later version) BUT runs on equally sampled and averged across epochs 
+# csv is na output of wrap_mspe_psd_v2.py
 library(lme4)
 require(car)
 library(nlme)
@@ -6,32 +7,51 @@ library(multcomp)
 library(plyr)
 library(ggpubr)
 library(ggsignif)
-d_l = read.csv('H:\\BABY\\results\\mspe_allsbjs_alleeg_allepochs.csv')
-#d_l = read.csv('H:\\BABY\\results\\old\\stat\\df_l_eps.csv')
+d_l = read.csv('H:\\BABY\\results\\mspe_allsbjs_alleeg_10epochs.csv')
+
 d_l = d_l[complete.cases(d_l), ]
- 
-d_l = subset(d_l, variable == 0) #if mspe select scale
+
+d_l = subset(d_l, variable == 4) #if mspe select scale
+
+#aggregate by time and stage
+aggregate(value~stag*time, data=d_l, FUN=sd)
+
+#d_s0 = subset(d_l, variable == 0) #scale as factor
+#d_s5 = subset(d_l, variable == 4) #scale as factor
+#d_l = rbind(d_s0, d_s5) #scale as factor
+  
 names(d_l)[names(d_l) == 'time'] <- 'time_id'
 names(d_l)[names(d_l) == 'sbj_id'] <- 'name_id_short'
 
+# Frequency count
+xtabs(~ stag + name_id_short, d_l)
 
 d_l$time_id = factor(d_l$time_id,
                      levels=unique(d_l$time_id))
 d_l$stag = factor(d_l$stag,
                   levels=unique(d_l$stag))
+d_l$variable = factor(d_l$variable,
+                  levels=unique(d_l$variable))
 
-#m1 = lmer(value ~ time_id*stag  + (1|name_id_short) + (1|stag), data=d_l)
-m2 = lmer(value ~ time_id * stag + (1+time_id|name_id_short), data=d_l) #THE model
+boxplot(value ~ time_id * stag * variable,
+        col=c("white","lightgray"),d_l)
+
+m1 = lmer(value ~ time_id * stag + (1+1|name_id_short), data=d_l) 
+
+m2 = lmer(value ~ time_id * stag + (1+time_id|name_id_short), data=d_l) 
+
+#m2 = lmer(value ~ time_id * stag * variable + (1+time_id|name_id_short), data=d_l)#scale as factor
 
 # strip plot; random effects crossed
 #m3 = lmer(value~time_id * stag + (1|name_id_short) + (1|time_id:name_id_short) + (1|stag:name_id_short), data=d_l)  
 
 #m4 = lmer(value~time_id * stag + (1|name_id_short) + (1|time_id:name_id_short) , data=d_l)  
+
 #m5 = lmer(value~time_id * stag + (1|name_id_short) + (1|stag:name_id_short) , data=d_l)  
 #summary(m4)
 
 Anova(m2)
-anova(m1, m2, m3, m4, m5)
+anova(m1, m2)
 
 #plot residuals
 #plot(fitted(m2), resid(m2))
@@ -39,8 +59,10 @@ anova(m1, m2, m3, m4, m5)
 #post hoc tests
 d_l = d_l[complete.cases(d_l), ] #drop nans
 d_l$SHD<-interaction(d_l$time, d_l$stag) #add interaction co
+#d_l$SHD<-interaction( d_l$stag) 
 #equivalent with m2, nlme library
 m2_posthoc <- lme(value~SHD, random=~time_id | name_id_short, data=d_l)
+
 m2_comp<-glht(m2_posthoc,mcp(SHD='Tukey'))
 summary(m2_comp)
 

@@ -12,7 +12,7 @@ from collections import Counter
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from time import time
 from imblearn.under_sampling import RandomUnderSampler
-from classify_with_shuffling_v2 import plot_sinlge_sbj
+
 
 def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
                     check_mspe=True, null=False, n_folds=2, search=False):
@@ -86,11 +86,9 @@ def classify_shuffle_crosstime(pe1, pe2, stag1, stag2, five2two, myshow=False, \
 
         #resample
         sampler = RandomUnderSampler(random_state=0)
-        sampler.fit(X_train_val, y_train_val)
-        X_train_val, y_train_val = sampler.sample(X_train_val, y_train_val)
+        X_train_val, y_train_val = sampler.fit_sample(X_train_val, y_train_val)
         sampler = RandomUnderSampler(random_state=0)
-        sampler.fit(X_test, y_test)
-        X_test, y_test = sampler.sample(X_test, y_test)
+        X_test, y_test = sampler.fit_sample(X_test, y_test)
         print(Counter(y_train_val).items())
         print(Counter(y_test).items())
         print('\n')

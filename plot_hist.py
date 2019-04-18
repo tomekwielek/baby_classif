@@ -126,7 +126,7 @@ def test_counts(data, sleep_stage):
     pval = stats.wilcoxon(t1_, t2_, zero_method='wilcox')
     set_trace()
     return pval
-test_counts(d, sleep_stage=3)
+test_counts(d, sleep_stage=2)
 
 '''
 plot circle plot with average ratios for t1 and t2, return modified df (e.g:d_corr)
