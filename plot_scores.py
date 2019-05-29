@@ -413,10 +413,10 @@ print pval
 #WAKE
 U, pval = mann(f1_cat['WAKE'][f1_cat['time']=='week2'], \
         f1_cat['WAKE'][f1_cat['time']=='week5'])
-print pval
+print(pval)
 
 # Acc scores stat
 df = pd.concat([acc_2, acc_5])
 U, pval = mann(df['acc'][df['time']=='week2'], \
         df['acc'][df['time']=='week5'])
-print pval
+print(pval)

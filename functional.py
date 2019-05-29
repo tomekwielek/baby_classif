@@ -462,7 +462,7 @@ def load_single_append(path, fnames, typ):
             print('Folder is empty')
             counter += 1
             continue
-        if typ in ['psd', 'psd_nofilt', 'psd_nofilt_ref100', 'psd_hd']:
+        if typ in ['psd', 'psd_nofilt', 'psd_nofilt_ref100', 'psd_hd', 'psd_v2']:
             stag, pe, freqs = myload(typ=typ, sbj=s) # for psd load freqs bins
 
         else:

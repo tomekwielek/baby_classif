@@ -7,19 +7,13 @@ library(multcomp)
 library(plyr)
 library(ggpubr)
 library(ggsignif)
-d_l = read.csv('H:\\BABY\\results\\mspe_allsbjs_alleeg_10epochs.csv')
-
+d_l = read.csv('F:\\BABY\\results\\psd_delta_1_3Hz.csv')
 d_l = d_l[complete.cases(d_l), ]
-
-d_l = subset(d_l, variable == 4) #if mspe select scale
+d_l['value'] = d_l['value'] * 100 #get %
 
 #aggregate by time and stage
 aggregate(value~stag*time, data=d_l, FUN=sd)
 
-#d_s0 = subset(d_l, variable == 0) #scale as factor
-#d_s5 = subset(d_l, variable == 4) #scale as factor
-#d_l = rbind(d_s0, d_s5) #scale as factor
-  
 names(d_l)[names(d_l) == 'time'] <- 'time_id'
 names(d_l)[names(d_l) == 'sbj_id'] <- 'name_id_short'
 
@@ -31,7 +25,7 @@ d_l$time_id = factor(d_l$time_id,
 d_l$stag = factor(d_l$stag,
                   levels=unique(d_l$stag))
 d_l$variable = factor(d_l$variable,
-                  levels=unique(d_l$variable))
+                      levels=unique(d_l$variable))
 
 boxplot(value ~ time_id * stag * variable,
         col=c("white","lightgray"),d_l)
@@ -50,7 +44,7 @@ m2 = lmer(value ~ time_id * stag + (1+time_id|name_id_short), data=d_l)
 #m5 = lmer(value~time_id * stag + (1|name_id_short) + (1|stag:name_id_short) , data=d_l)  
 #summary(m4)
 
-Anova(m2)
+Anova(m1)
 anova(m1, m2)
 
 #post hoc tests for stag
@@ -58,10 +52,11 @@ m2_posthoc_stag <- lme(value~stag, random=~time_id | name_id_short, data=d_l)
 m2_comp_stag <-glht(m2_posthoc_stag,mcp(stag='Tukey'))
 summary(m2_comp_stag)
 
-
-#post hoc tests for interaction 
+#post hoc tests for interaction
 d_l = d_l[complete.cases(d_l), ] #drop nans
 d_l$SHD<-interaction(d_l$time, d_l$stag) #add interaction co
+#d_l$SHD<-interaction( d_l$stag) 
+#equivalent with m2, nlme library
 m2_posthoc <- lme(value~SHD, random=~time_id | name_id_short, data=d_l)
 
 m2_comp<-glht(m2_posthoc,mcp(SHD='Tukey'))
@@ -80,7 +75,7 @@ p <- ggboxplot(d_l, x = "stag", y = "value",
 p  <- p + theme(legend.title=element_blank(),
                 axis.title.x=element_blank())
 p <- p + ylab('Permutation entropy')
- 
+
 
 p <- p + geom_text(aes(x = 1, y= 1.56, label = "*"), size = 12) 
 p <- p + geom_text(aes(x = 2, y= 1.56, label = "*"), size = 12) 

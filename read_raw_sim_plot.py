@@ -20,12 +20,14 @@ from statsmodels.tsa.arima_process import arma_generate_sample
 from pyentrp import entropy as ent
 
 
-fnames_ = sorted(np.array(filter(lambda x: x.endswith('.edf'), os.listdir(raw_path))))
+fnames_ = sorted(list(filter(lambda x: x.endswith('.edf'), os.listdir(raw_path))))
 fnames = [i.split('.edf')[0] for i in fnames_] #delete .edf from fname
 
 sheet = 'St_Pr_corrected_35min'
 setup = 'mspet1m3'
-sbj = '110_2_S'
+sbj = '110_2_S' # manuscript intern revied verison
+#sbj = '118_1_S'
+
 
 stages_coding = {'N' : 1, 'R' : 2, 'W' : 3,'X' : 4, 'XW' : 5, 'WR' : 6, 'RW' : 7, 'XR' : 8, 'WN' : 9}
 
@@ -97,24 +99,69 @@ def compute_pe_segm(raw, embed=3, tau=1, window=30, mspe=False):
         data = np.delete(data, np.s_[:window_dp], axis =1 )
         for j in range(chan_len):
             if mspe:
-                m[:,j,i], srts = ent.multiscale_permutation_entropy(e_[j], m=3, delay=1, scale=scale)
-                store_chs.append(srts)
+                #m[:,j,i], srts = ent.multiscale_permutation_entropy(e_[j], m=3, delay=1, scale=scale)
+                m[:,j,i] = ent.multiscale_permutation_entropy(e_[j], m=3, delay=1, scale=scale)
+                #store_chs.append(srts)
 
             else:
-                m[j,i], srts[j, i, :] = ent.permutation_entropy(e_[j], m=embed, delay=tau)
+                #m[j,i], srts[j, i, :] = ent.permutation_entropy(e_[j], m=embed, delay=tau)
+                m[j,i] = ent.permutation_entropy(e_[j], m=embed, delay=tau)
         store_eps.append(store_chs)
 
         del e_
-    return m, store_eps
+    return m
+
+def relative_power(data, sf, band, window_sec=1.):
+    # Adapted from https://raphaelvallat.com/bandpower.html
+    """Compute the average power of the signal x in a specific frequency band.
+
+    Parameters
+    ----------
+    data : 2d-array
+        Input signal in the chs x time-domain.
+    sf : float
+        Sampling frequency of the data.
+    band : list
+        Lower and upper frequencies of the band of interest.
+    window_sec : float
+        Length of each window in seconds.
+        If None, window_sec = (1 / min(band)) * 2
+
+    """
+    from scipy.signal import welch
+    from scipy.integrate import simps
+    band = np.asarray(band)
+    low, high = band
+    data = data * 10e5
+    # Define window length
+    if window_sec is not None:
+        nperseg = window_sec * sf
+    else:
+        nperseg = (2 / low) * sf
+
+    rel_psd = np.zeros((11, 30)) #empty array define #freqs bins !!
+
+    for chi in range(data.shape[0]): #iterate channels
+        # Compute the modified periodogram (Welch)
+        freqs, psd = welch(data[chi, :], sf, nperseg=nperseg)
+        # Frequency resolution
+        freq_res = freqs[1] - freqs[0]
+        # Find closest indices of band in frequency vector
+        idx_band = np.logical_and(freqs >= low, freqs <= high)
+        # Integral approximation of the spectrum using Simpson's rule.
+        #bp = simps(psd[idx_band], dx=freq_res)
+        #  OR simple sum over bins, Relative power see: Xiao(2018) 'Electroencephalography power and coherence changes with age and motor skill'
+        bp = psd[idx_band].sum()
+        #rel_psd[chi, :] = psd[idx_band] / bp
+        rel_psd[chi, :] = psd[idx_band] / bp
+    return rel_psd, freqs[idx_band]
 
 def compute_psd_segm(raw, window=30):
-    from mne.time_frequency import psd_welch
-    from mne.io import RawArray
-
     def get_raw_array(data):
+        from mne.io import RawArray
         ch_types  = ['eeg'] * chan_len
         info = mne.create_info(ch_names=raw.ch_names, sfreq=sfreq, ch_types=ch_types)
-        raw_array = RawArray(data, info=info)
+        raw_array = RawArray(data*10e5, info=info) #convert to volts
         return raw_array
 
     data = raw.get_data()
@@ -127,9 +174,9 @@ def compute_psd_segm(raw, window=30):
     for i in range(no_epochs):
         e_ = data[...,:window_dp]
         data = np.delete(data, np.s_[:window_dp], axis =1 )
-        ra = get_raw_array(e_)
-        psd, freqs = psd_welch(ra ,fmin=1,fmax=30, n_overlap=128)
-        psd = 10 * np.log10(psd) # or log is done latter on, in wrap_psd.py
+        #ra = get_raw_array(e_) #for welch by mne
+        #psd, freqs = psd_welch(ra ,fmin=1,fmax=30, n_per_seg=4*sfreq)
+        psd, freqs = relative_power(e_, sfreq, [1.,30.])
         store_psd.append(psd)
     #psd array of shape [freqs, channs, epochs]
     return freqs, np.asarray(store_psd).transpose(2,1,0)
@@ -145,7 +192,10 @@ for k, v in sorted(idfs.items()):
         raw, stag = load_raw_and_stag(k, v[0])
         raw, _ = order_channels(raw) #reorder channels, add zeros for missings (EMG usually)
         stag = encode(stag)
-        pe, srts = compute_pe_segm(raw, embed=embed, tau=tau, mspe=True)
+
+        #pe, srts = compute_pe_segm(raw, embed=embed, tau=tau, mspe=True)
+        pe = compute_pe_segm(raw, embed=embed, tau=tau, mspe=True)
+
         if sbj == '110_2_S': #see annot by HL in excel; BL shorter
             stag = stag.iloc[:66]
         if len(stag) - pe.shape[-1] == 1:#pe can be shorter due to windowing
@@ -153,7 +203,8 @@ for k, v in sorted(idfs.items()):
         pe, stag, idx_selected = select_class_to_classif([pe], [stag], sel_idxs)
         pe = pe[0]
         stag =stag[0]
-        srts = [srts[i] for i in range(len(srts)) if i in idx_selected]
+        #srts = [srts[i] for i in range(len(srts)) if i in idx_selected]
+
         freqs, psd = compute_psd_segm(raw, window=30)
         psd = psd[:,:, idx_selected]
 
@@ -161,8 +212,9 @@ for k, v in sorted(idfs.items()):
         print ('Sbj dropped, see red annot. by H.L in excel file')
         continue
 
-write_pickle((pe, srts, psd, freqs), '110_2_S_psd_mspe_data_plots.txt')
-pe, srts, psd = read_pickle('110_2_S_psd_mspe_data_plots.txt')
+# SAVE
+#write_pickle((pe, srts, psd, freqs), '110_2_S_psd_mspe_data_plots.txt')
+#pe, srts, psd = read_pickle('110_2_S_psd_mspe_data_plots.txt')
 
 #Epoch raw signal
 def get_epochs(raw, window=30):
@@ -223,19 +275,22 @@ def panda_patterns_plot_mspe(data, mspe, epoch_idx, ch_idx, ax, scale):
     ax.text(0.1, 0.45, 'PE={:4.4}'.format(mspe[scale, ch_idx, epoch_idx]), fontsize=16)
     return None
 
-def plot_psd(psd, ax, ch_idx):
+def plot_psd(psd, ax, ch_idx, fmin=1, fmax=30): # Define what freqs to plot):
     from mpl_toolkits.axes_grid1 import make_axes_locatable
     psd = psd.transpose(0,2,1)
     times = range(psd.shape[1])
-    #fig, ax = plt.subplots(figsize=(11,4))
-    mesh = ax.pcolormesh(times, freqs, psd[:,:,ch_idx],
-                         cmap='RdBu_r')
 
-    ax.set(ylim=freqs[[0, -1]], ylabel='Frequency [Hz]', xticks=[])
+    freq_mask = np.logical_and(freqs>=fmin, freqs<=fmax)
+    freqs_masked = freqs[freq_mask]
+    #set_trace()
+    mesh = ax.pcolormesh(times, freqs_masked, psd[fmin:fmax,:,ch_idx],
+                         cmap='viridis')
+
+    ax.set(ylim=freqs_masked[[0, -1]], ylabel='Frequency [Hz]', xticks=[])
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='2%', pad=0.05)
     cb = plt.colorbar(mesh, cax=cax, orientation='vertical')
-    cb.set_label('Log power')
+    cb.set_label('Realtive power')
     cb.set_ticks([])
     ax.set_title('Channel {}'.format(raw.ch_names[ch_idx]))
     ax.axvline(times[nrem_idx], color='black', alpha=0.9, linestyle='--')
@@ -247,7 +302,7 @@ def plot_stag(stag, ax):
     times = range(len(stag))
     ax.plot(stag['numeric'])
     unique_cl = np.unique(stag['numeric'])
-    unique_key = [[k for k, v in stages_coding.iteritems() if v == s ][0] for s in unique_cl ]
+    unique_key = [[k for k, v in stages_coding.items() if v == s ][0] for s in unique_cl ]
     ax.set(xlim=(0,len(stag)-1), yticks=unique_cl, yticklabels=unique_key, xlabel='Epochs (30s)',
             ylabel='Sleep stage')
     ax.axvline(times[nrem_idx], color='black', alpha=0.9, linestyle='--')
@@ -268,35 +323,26 @@ ax2.set_position(pos2_ch)
 
 
 # Define channls, scale and epochs idx to plot histograms for
-ch_idx = 4 #EMG=7
+ch_idx = 0 # 4 = C4
 scale = 4
 nrem_idx = 20
 rem_idx = 3
 wake_idx = 60
 
-plot_psd(psd,  ax=ax1, ch_idx=4)
+plot_psd(psd,  ax=ax1, ch_idx=ch_idx)
 plot_stag(stag, ax2)
+plt.show()
 
-
+'''
 fig, (ax1, ax2, ax3) = plt.subplots(1,3, sharey=True, figsize=(7,4))
 panda_patterns_plot_mspe(srts, pe,  epoch_idx=nrem_idx, ch_idx=ch_idx, ax=ax1, scale=scale)
 ax1.set_ylabel('Normalized frequency', size = 15)
 panda_patterns_plot_mspe(srts, pe, epoch_idx=rem_idx, ch_idx=ch_idx, ax=ax2, scale=scale)
 panda_patterns_plot_mspe(srts, pe, epoch_idx=wake_idx, ch_idx=ch_idx, ax=ax3, scale=scale)
 #plt.suptitle('Scale={}'.format(str(scale)))
+'''
 
-
-
-
-
-
-
-
-
-
-
-
-
+'''
 def single_patts_plots():
     patts = list(itertools.permutations([0,1,2]))
     for i, p in enumerate(patts):
@@ -307,7 +353,7 @@ def single_patts_plots():
         plt.show()
         plt.savefig('p'+str(i)+'.tiff')
 single_patts_plots()
-
+'''
 #PE histograms
 '''
 fig, (ax1, ax2, ax3) = plt.subplots(1,3)

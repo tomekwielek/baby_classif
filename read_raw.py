@@ -10,7 +10,7 @@ def read_raw(setup, sheet):
     from IPython.core.debugger import set_trace
     from config import paths
 
-    fnames_ = sorted(np.array(filter(lambda x: x.endswith('.edf'), os.listdir(raw_path))))
+    fnames_ = sorted(list(filter(lambda x: x.endswith('.edf'), os.listdir(raw_path))))
     fnames = [i.split('.edf')[0] for i in fnames_] #delete .edf from fname
     #just for counting
     #fnames_100_ = [i for i in fnames if '_ref100' in i]
@@ -80,14 +80,57 @@ def read_raw(setup, sheet):
 
         return m
 
-    def compute_psd_segm(raw, window=30):
-        from mne.time_frequency import psd_welch
-        from mne.io import RawArray
 
+    def relative_power(data, sf, band, window_sec=1.):
+        # Adapted from https://raphaelvallat.com/bandpower.html
+        """Compute the average power of the signal x in a specific frequency band.
+
+        Parameters
+        ----------
+        data : 2d-array
+            Input signal in the chs x time-domain.
+        sf : float
+            Sampling frequency of the data.
+        band : list
+            Lower and upper frequencies of the band of interest.
+        window_sec : float
+            Length of each window in seconds.
+            If None, window_sec = (1 / min(band)) * 2
+
+        """
+        from scipy.signal import welch
+        from scipy.integrate import simps
+        band = np.asarray(band)
+        low, high = band
+        data = data * 10e5
+        # Define window length
+        if window_sec is not None:
+            nperseg = window_sec * sf
+        else:
+            nperseg = (2 / low) * sf
+
+        rel_psd = np.zeros((11, 30)) #empty array define #freqs bins !!
+
+        for chi in range(data.shape[0]): #iterate channels
+            # Compute the modified periodogram (Welch)
+            freqs, psd = welch(data[chi, :], sf, nperseg=nperseg)
+            # Frequency resolution
+            freq_res = freqs[1] - freqs[0]
+            # Find closest indices of band in frequency vector
+            idx_band = np.logical_and(freqs >= low, freqs <= high)
+            # Integral approximation of the spectrum using Simpson's rule.
+            #bp = simps(psd[idx_band], dx=freq_res)
+            #  OR simple sum over bins, Relative power see: Xiao(2018) 'Electroencephalography power and coherence changes with age and motor skill'
+            bp = psd[idx_band].sum()
+            rel_psd[chi, :] = psd[idx_band] / bp
+        return rel_psd, freqs[idx_band]
+
+    def compute_psd_segm(raw, window=30):
         def get_raw_array(data):
+            from mne.io import RawArray
             ch_types  = ['eeg'] * chan_len
             info = mne.create_info(ch_names=raw.ch_names, sfreq=sfreq, ch_types=ch_types)
-            raw_array = RawArray(data, info=info)
+            raw_array = RawArray(data*10e5, info=info) #convert to volts
             return raw_array
 
         data = raw.get_data()
@@ -100,12 +143,15 @@ def read_raw(setup, sheet):
         for i in range(no_epochs):
             e_ = data[...,:window_dp]
             data = np.delete(data, np.s_[:window_dp], axis =1 )
-            ra = get_raw_array(e_)
-            psd, freqs = psd_welch(ra ,fmin=1,fmax=30)
-            #psd = 10 * np.log10(psd) # log is done latter on, in wrap_psd.py
+            #ra = get_raw_array(e_) #for welch by mne
+            #psd, freqs = psd_welch(ra ,fmin=1,fmax=30, n_per_seg=4*sfreq)
+            psd, freqs = relative_power(e_, sfreq, [1.,30.])
             store_psd.append(psd)
         #psd array of shape [freqs, channs, epochs]
         return freqs, np.asarray(store_psd).transpose(2,1,0)
+
+
+
 
     def encode(stag):
         stages_coding = {'N' : 1, 'R' : 2, 'W' : 3,'X' : 4, 'XW' : 5, 'WR' : 6, 'RW' : 7, 'XR' : 8, 'WN' : 9}
@@ -121,12 +167,10 @@ def read_raw(setup, sheet):
     #mywriter(idfs, sheet + '.xlsx')
 
     #select single subject
-    sbj = '113_2_S'
-    idfs = {k : v for k,v in idfs.items() if k == sbj}
+    #sbj = '113_2_S'
+    #idfs = {k : v for k,v in idfs.items() if k == sbj}
 
     for k, v in sorted(idfs.items()):
-        #no overwriting!!!!!! comment out if overw. desired
-        #
         k_short = k.split('_S')[0]
         p = paths(typ=setup, sbj=k_short) #path to a folder
         #if os.path.exists(p):
@@ -138,10 +182,11 @@ def read_raw(setup, sheet):
 
             raw, _ = order_channels(raw) #reorder channels, add zeros for missings (EMG usually)
             stag = encode(stag)
-            pe = compute_pe_segm(raw, embed=embed, tau=tau, mspe=True)
+            #pe = compute_pe_segm(raw, embed=embed, tau=tau, mspe=True)
             freqs, psd = compute_psd_segm(raw, window=30)
-            mysave(var = [stag, psd, freqs], typ='psd', sbj=k[:5])
-            mysave(var = [stag, pe], typ='mspet1m3', sbj=k[:5])
+            #set_trace()
+            mysave(var = [stag, psd, freqs], typ='psd_v2', sbj=k[:5])
+            #mysave(var = [stag, pe], typ='mspet1m3', sbj=k[:5])
         elif k in bad:
             print ('Sbj dropped, see red annot. by H.L in excel file')
             continue

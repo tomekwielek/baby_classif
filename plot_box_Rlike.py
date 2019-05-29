@@ -20,6 +20,7 @@ df = pd.read_csv('H:\\BABY\\results\\mspe_allsbjs_alleeg_10epochs.csv')
 
 df = df[df['variable'] == 4]
 
+
 fig, ax = plt.subplots()
 box = sns.boxplot(x='stag', y='value', hue='time',data=df, linewidth=3, \
                 ax=ax, whis=[5, 95], showfliers=False, dodge=True)

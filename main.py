@@ -25,8 +25,8 @@ sel_idxs = [1,2,3]
 time = 5 # if 2 week2, elif 5 week5, elif 'cat' concatenate
 n_folds = 2
 
-#setup = 'psd'
-setup = 'mspet1m3'
+setup = 'psd'
+#setup = 'mspet1m3'
 #iterate to compare statistically psd vs mspe based
 #store_perfs = {'s1':[], 's2': [], 's3': [], 's4': []}
 #store_perfs = {'mspet1m3' : [], 'psd' : []}

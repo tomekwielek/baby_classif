@@ -1,9 +1,9 @@
 #raw_path ='H:\\BABY\\data\\bv\\exp\\' #brain vision pp. data
-raw_path ='H:\\BABY\\data\\'
-base_path = 'H:\\BABY\\working\\subjects\\'
-results_path='H:\\BABY\\results\\'
-stag_fname = 'H:\\BABY\\data\staging\\Stages_inklPrechtl_corrected.xlsx'
-report = 'H:\\BABY\\working\\report.html'
+raw_path ='F:\\BABY\\data\\'
+base_path = 'F:\\BABY\\working\\subjects\\'
+results_path='F:\\BABY\\results\\'
+stag_fname = 'F:\\BABY\\data\staging\\Stages_inklPrechtl_corrected.xlsx'
+report = 'F:\\BABY\\working\\report.html'
 from mne.report import Report
 report = Report(report)
 
@@ -45,7 +45,7 @@ bad_sbjs_2 = ['111_2','112_2', '113_2', '118_2', '119_2', '202_2', '204_2', '205
                     '231_2', '212_2', '214_2', '220_2', '232_2']
 
 # Subjects with recorgins-length-issues (e.g.:first baseline 4.749sec too short). ONLY for hd relevant.
-length_issue_sbjs = [110_2, 114_2, 117_1, 201_1, 202_1, 204_1, 205_1, 207_1, 208_1, 220_2, 223_2, 224_2,
+length_issue_sbjs = [110_2, 114_2, 117_1, 201_1, 202_1, 204_1, 205_1, 207_1, 208_1, 220_2, 223_2, 224_2, \
                     226_2, 223_1, 235_1, 236_2]
 
 def paths(typ, c=None, sbj='sbj_av'):
@@ -73,6 +73,7 @@ def paths(typ, c=None, sbj='sbj_av'):
         pet1m4_stag_uncorr= op.join(this_path, '%s.txt' % sbj),
         psd = op.join(this_path, '%s.txt' % sbj),
         psd_hd = op.join(this_path, '%s.txt' % sbj),
+        psd_v2 = op.join(this_path, '%s.txt' % sbj),
         pe_hd = op.join(this_path, '%s.txt' % sbj),
         psd_nofilt = op.join(this_path, '%s.txt' % sbj), #1eog no filt
         psd_nofilt_ref100 = op.join(this_path, '%s.txt' % sbj), #2eog no filt
@@ -92,7 +93,7 @@ def myload(typ, sbj, c=None):
     fname = paths(typ=typ, c=c, sbj=sbj)
     if typ in ['pet1m3', 'pet3m3', 'pet1m4', 'pet3m4', 'pet1m3_stag_uncorr',
                 'pet3m3_stag_uncorr', 'pet1m4_stag_uncorr', 'mspet1m3','mspet1m3_nofilt', 'mspet_ord1m3',
-                'mspet1m3_nofilt_ref100', 'psd_nofilt_ref100',
+                'mspet1m3_nofilt_ref100', 'psd_nofilt_ref100', 'psd_v2',
                 'psd', 'psd_hd', 'pe_hd', 'psd_nofilt', 'psd_notch', 'pet1m3_30hz', 'pred']:
         with open(fname, 'rb') as f:
             out = pickle.load(f, encoding='latin1')
@@ -112,7 +113,7 @@ def mysave(var, typ, sbj='sbj_av',  overwrite=True):
     elif typ in ['pet1m3', 'pet3m3', 'pet1m4', 'pet3m4', 'pet1m3_stag_uncorr',
                 'pet3m3_stag_uncorr', 'pet1m4_stag_uncorr', 'mspet1m3','mspet1m3_nofilt', 'mspet_ord1m3',
                 'mspet1m3_nofilt_ref100', 'psd_nofilt_ref100', 'psd', 'psd_nofilt', 'psd_notch',
-                'psd_hd', 'pe_hd', 'pet1m3_30hz', 'pred']:
+                'psd_hd', 'pe_hd', 'pet1m3_30hz', 'pred', 'psd_v2']:
         with open(fname, 'wb') as f:
             pickle.dump(var, f)
     else:
