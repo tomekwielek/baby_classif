@@ -1,0 +1,11 @@
+*.pyc
+.project
+**/unused/
+*.py
+*.csv
+*.xlsx
+*.txt
+*.html
+*.ipynb
+.pydevproject
+__pycache__/

@@ -360,7 +360,7 @@ ax.set( ylabel='Accuracy [%]', xlabel='', xticks=[0,1], ylim= [50, 75],\
 
 matplotlib.rcParams.update({'font.size': 15})
 
-#U, pval = mann(df['two'], df['five'])
+U, pval = mann(df['two'], df['five'])
 
 
 # week2 and five2two
@@ -377,7 +377,7 @@ ax.set( ylabel='Accuracy [%]', xlabel='', xticks=[0,1], ylim= [50, 75],\
 matplotlib.rcParams.update({'font.size': 15})
 
 U, pval = mann(df['two'], df['five2two'])
-print pval
+print(pval)
 
 mann(f1_2['WAKE'], f1_5['WAKE'])
 
@@ -409,7 +409,7 @@ plot_confusion_matrix(cm52, ['NREM', 'REM', 'WAKE'], title='week5->week2', norma
 #REM
 U, pval = mann(f1_cat['REM'][f1_cat['time']=='week2'], \
         f1_cat['REM'][f1_cat['time']=='week5'])
-print pval
+print(pval)
 #WAKE
 U, pval = mann(f1_cat['WAKE'][f1_cat['time']=='week2'], \
         f1_cat['WAKE'][f1_cat['time']=='week5'])
