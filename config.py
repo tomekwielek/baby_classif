@@ -1,9 +1,9 @@
 #raw_path ='H:\\BABY\\data\\bv\\exp\\' #brain vision pp. data
-raw_path ='F:\\BABY\\data\\'
-base_path = 'F:\\BABY\\working\\subjects\\'
-results_path='F:\\BABY\\results\\'
-stag_fname = 'F:\\BABY\\data\staging\\Stages_inklPrechtl_corrected.xlsx'
-report = 'F:\\BABY\\working\\report.html'
+raw_path ='H:\\BABY\\data\\'
+base_path = 'H:\\BABY\\working\\subjects\\'
+results_path='H:\\BABY\\results\\'
+stag_fname = 'H:\\BABY\\data\staging\\Stages_inklPrechtl_corrected.xlsx'
+report = 'H:\\BABY\\working\\report.html'
 from mne.report import Report
 report = Report(report)
 

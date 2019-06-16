@@ -7,11 +7,13 @@ library(multcomp)
 library(plyr)
 library(ggpubr)
 library(ggsignif)
+library(r2glmm)
 d_l = read.csv('H:\\BABY\\results\\mspe_allsbjs_alleeg_10epochs.csv')
 
 d_l = d_l[complete.cases(d_l), ]
 
-d_l = subset(d_l, variable == 4) #if mspe select scale
+d_l = subset(d_l, variable ==4) #if mspe select scale
+#d_l = subset(d_l, variable ==0) #if mspe select scale
 
 #aggregate by time and stage
 aggregate(value~stag*time, data=d_l, FUN=sd)
@@ -52,6 +54,9 @@ m2 = lmer(value ~ time_id * stag + (1+time_id|name_id_short), data=d_l)
 
 Anova(m2)
 anova(m1, m2)
+
+#Effect size 
+#r2beta(m1, method = 'kr', partial = T)
 
 #post hoc tests for stag
 m2_posthoc_stag <- lme(value~stag, random=~time_id | name_id_short, data=d_l)

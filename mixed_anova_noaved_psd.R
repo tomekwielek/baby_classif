@@ -7,7 +7,10 @@ library(multcomp)
 library(plyr)
 library(ggpubr)
 library(ggsignif)
-d_l = read.csv('F:\\BABY\\results\\psd_delta_1_3Hz.csv')
+library(MuMIn)
+
+#d_l = read.csv('H:\\BABY\\results\\psd_delta_1_3Hz.csv')
+d_l = read.csv('H:\\BABY\\results\\psd_12_30Hz.csv')
 d_l = d_l[complete.cases(d_l), ]
 d_l['value'] = d_l['value'] * 100 #get %
 
@@ -44,13 +47,17 @@ m2 = lmer(value ~ time_id * stag + (1+time_id|name_id_short), data=d_l)
 #m5 = lmer(value~time_id * stag + (1|name_id_short) + (1|stag:name_id_short) , data=d_l)  
 #summary(m4)
 
-Anova(m1)
+Anova(m2)
 anova(m1, m2)
+
+#Effect size 
+r.squaredGLMM(m1)
 
 #post hoc tests for stag
 m2_posthoc_stag <- lme(value~stag, random=~time_id | name_id_short, data=d_l)
 m2_comp_stag <-glht(m2_posthoc_stag,mcp(stag='Tukey'))
 summary(m2_comp_stag)
+
 
 #post hoc tests for interaction
 d_l = d_l[complete.cases(d_l), ] #drop nans
@@ -59,8 +66,12 @@ d_l$SHD<-interaction(d_l$time, d_l$stag) #add interaction co
 #equivalent with m2, nlme library
 m2_posthoc <- lme(value~SHD, random=~time_id | name_id_short, data=d_l)
 
-m2_comp<-glht(m2_posthoc,mcp(SHD='Tukey'))
+m2_comp<-glht(m2_posthoc,mcp(SHD='Tukey')) #Tukey
 summary(m2_comp)
+
+
+
+
 
 
 #Visualisation
