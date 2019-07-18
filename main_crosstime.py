@@ -10,11 +10,10 @@ from mne import io
 import pandas as pd
 import pickle
 import seaborn as sns
-from classify_with_shuffling_v2_crosstime import classify_shuffle_crosstime
+from classify_with_shuffling_crosstime import classify_shuffle_crosstime
 from collections import defaultdict
 from IPython.core.debugger import set_trace
 from config import bad_sbjs_1, bad_sbjs_2
-#from plot_pe_psd_stag import plot_data
 
 path = 'H:\\BABY\\working\subjects'
 fnames =  os.listdir(path)
@@ -22,11 +21,9 @@ fnames1 = [f for f in fnames if f.endswith('1')]
 fnames2 = [f for f in fnames if f.endswith('2')] #filter folders
 sel_idxs = [1,2,3]
 n_folds = 2
-five2two = False #if True cross gen: 5weeks - 2weeks otherwise the oposite
-#setup = 'psd'
-setup = 'mspet1m3'
+five2two = False #if True cross generalization (5weeks train, 2weeks test) otherwise the opposite
 store_perfs = []
-s = 5 #taus no
+s = 5 #taus
 
 mspe1, mspe_stag1, mspe_names1, _ = load_single_append(path, fnames1, typ='mspet1m3')
 mspe2, mspe_stag2, mspe_names2, _ = load_single_append(path, fnames2, typ='mspet1m3')
@@ -39,9 +36,6 @@ del (psd_stag1, psd_stag2)
 
 mspe1, psd1, stag1, _ = remove_20hz_artif(mspe1, psd1, mspe_stag1, mspe_names1, freqs, bad_sbjs_1)
 mspe2, psd2, stag2, _ = remove_20hz_artif(mspe2, psd2, mspe_stag2, mspe_names2, freqs, bad_sbjs_2)
-
-#stag1 = mspe_stag1 #if no remove_20Hz
-#stag2 = mspe_stag2
 
 mspe1, stag1, _ = select_class_to_classif(mspe1, stag1, sel_idxs=sel_idxs)
 mspe2, stag2, _ = select_class_to_classif(mspe2, stag2, sel_idxs=sel_idxs)
@@ -65,21 +59,17 @@ mspe1 = [ mspe1_[i].reshape(-1, mspe1_[i].shape[-1]) for i in range(len(mspe1_))
 mspe2_ = [ mspe2[i ][:s, ...] for i in range(len(mspe2)) ] #use scale: 1, 2, 3, 4 only
 mspe2 = [ mspe2_[i].reshape(-1, mspe2_[i].shape[-1]) for i in range(len(mspe2_)) ] #reshape
 
-
-
-# Index for plot sbj
+# Index for a sbj to plot
 idx_plot = 1
-#assert names1[idx_plot].split('_')[0] == names2[idx_plot].split('_')[0]
 
 # Get all metrics
 perf = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, myshow=False, \
                     check_mspe=True, null=False, n_folds=n_folds, five2two=five2two, search=True)
 
-print np.asarray([perf[i][0] for i in range(len(perf))]).mean()
+# Save scores
+write_pickle(perf, 'mspe52_cat_searched_scores.txt')
 
-#write_pickle(perf, 'mspe52_cat_searched_scores.txt')
-
-#Run shuffling
+# Run classification on shuffled data (chance level)
 nulliter  = 100
 null_perfs = []
 
@@ -88,9 +78,5 @@ for idx in range(nulliter):
                         check_mspe=True, null=True, n_folds=n_folds, five2two=five2two, search=False)
     print(idx)
     null_perfs.append(perf_n)
-
+# Save chance scores
 write_pickle(null_perfs, 'null_week25.txt')
-
-
-d = read_pickle('null_week5.txt')
-dd = np.asarray([np.asarray([d[i][j][3] for j in range(len(d[0]))]) for i in range(len(d))])

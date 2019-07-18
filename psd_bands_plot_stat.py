@@ -19,7 +19,7 @@ from matplotlib.patches import Patch
 import matplotlib
 matplotlib.rcParams.update({'font.size': 14})
 
-path = 'F:\\BABY\\working\subjects'
+path = 'H:\\BABY\\working\subjects'
 fnames =  os.listdir(path)
 fnames1 = [f for f in fnames if f.endswith('1')]
 fnames2 = [f for f in fnames if f.endswith('2')] #filter folders
@@ -124,7 +124,7 @@ df1 = df1.dropna()
 
 ##################################
 band = 'slow'
-freq_min, freq_max = (4,12) # np like subseting( incl, excl)
+freq_min, freq_max = (4,12) # numpy like subseting( incl, excl)
 
 save_name = 'psd_theta_alpha_4_11Hz.csv'
 #################################

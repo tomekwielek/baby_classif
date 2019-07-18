@@ -1,7 +1,6 @@
 *.pyc
 .project
 **/unused/
-*.py
 *.csv
 *.xlsx
 *.txt

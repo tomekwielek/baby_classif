@@ -8,7 +8,6 @@ from mne.report import Report
 report = Report(report)
 
 chs_incl = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4', 'ECG', 'EMG', 'HEOG_l', 'HEOG_r', 'VEOG'] #ref100 2heog
-#chs_incl = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4', 'ECG', 'EMG', 'HEOG', 'VEOG']
 
 #subjects - based on edf-s filenames [:5] bads excluded (see read_raw.py)
 subjects = ['104_2', '108_1', '108_2', '110_1', '110_2', '111_1',
@@ -44,7 +43,7 @@ bad_sbjs_2 = ['111_2','112_2', '113_2', '118_2', '119_2', '202_2', '204_2', '205
                 '218_2','219_2', '221_2', '222_2', '224_2', '225_2', '226_2', '227_2','234_2', '236_2', '238_2', '239_2', \
                     '231_2', '212_2', '214_2', '220_2', '232_2']
 
-# Subjects with recorgins-length-issues (e.g.:first baseline 4.749sec too short). ONLY for hd relevant.
+# Subjects with recorgins-length-issues (e.g.:first baseline 4.749sec too short). ONLY for hd-analysis relevant.
 length_issue_sbjs = [110_2, 114_2, 117_1, 201_1, 202_1, 204_1, 205_1, 207_1, 208_1, 220_2, 223_2, 224_2, \
                     226_2, 223_1, 235_1, 236_2]
 
