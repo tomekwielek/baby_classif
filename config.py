@@ -5,6 +5,7 @@ results_path='H:\\BABY\\results\\'
 stag_fname = 'H:\\BABY\\data\staging\\Stages_inklPrechtl_corrected.xlsx'
 report = 'H:\\BABY\\working\\report.html'
 from mne.report import Report
+from mne import read_epochs
 report = Report(report)
 
 chs_incl = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4', 'ECG', 'EMG', 'HEOG_l', 'HEOG_r', 'VEOG'] #ref100 2heog
@@ -57,10 +58,12 @@ def paths(typ, c=None, sbj='sbj_av'):
         this_path = op.join(base_path, sbj, typ)
     path_template = dict(
         raws=this_path,
+        epoch = op.join(this_path, '%s-epo.fif' % (sbj)),
         base_path=base_path,
         data_path=this_path,
         pet1m3= op.join(this_path, '%s.txt' % sbj),
         mspet1m3= op.join(this_path, '%s.txt' % sbj),
+        mspe_from_epochs= op.join(this_path, '%s.txt' % sbj),
         mspet1m3_nofilt= op.join(this_path, '%s.txt' % sbj), #1eog no filt
         mspet1m3_nofilt_ref100= op.join(this_path, '%s.txt' % sbj), #2eog no filt
         mspet_ord1m3= op.join(this_path, '%s.txt' % sbj),
@@ -73,6 +76,7 @@ def paths(typ, c=None, sbj='sbj_av'):
         psd = op.join(this_path, '%s.txt' % sbj),
         psd_hd = op.join(this_path, '%s.txt' % sbj),
         psd_v2 = op.join(this_path, '%s.txt' % sbj),
+        psd_unnorm = op.join(this_path, '%s.txt' % sbj),
         pe_hd = op.join(this_path, '%s.txt' % sbj),
         psd_nofilt = op.join(this_path, '%s.txt' % sbj), #1eog no filt
         psd_nofilt_ref100 = op.join(this_path, '%s.txt' % sbj), #2eog no filt
@@ -92,11 +96,14 @@ def myload(typ, sbj, c=None):
     fname = paths(typ=typ, c=c, sbj=sbj)
     if typ in ['pet1m3', 'pet3m3', 'pet1m4', 'pet3m4', 'pet1m3_stag_uncorr',
                 'pet3m3_stag_uncorr', 'pet1m4_stag_uncorr', 'mspet1m3','mspet1m3_nofilt', 'mspet_ord1m3',
-                'mspet1m3_nofilt_ref100', 'psd_nofilt_ref100', 'psd_v2',
+                'mspet1m3_nofilt_ref100', 'psd_nofilt_ref100', 'psd_v2', 'psd_unnorm','mspe_from_epochs',
                 'psd', 'psd_hd', 'pe_hd', 'psd_nofilt', 'psd_notch', 'pet1m3_30hz', 'pred']:
         with open(fname, 'rb') as f:
             out = pickle.load(f, encoding='latin1')
             #out = pickle.load(f)
+    elif typ in ['epoch']:
+        epochs_path = fname
+        out = read_epochs(fname, preload=True)
     else:
         raise NotImplementedError()
     return out
@@ -112,9 +119,11 @@ def mysave(var, typ, sbj='sbj_av',  overwrite=True):
     elif typ in ['pet1m3', 'pet3m3', 'pet1m4', 'pet3m4', 'pet1m3_stag_uncorr',
                 'pet3m3_stag_uncorr', 'pet1m4_stag_uncorr', 'mspet1m3','mspet1m3_nofilt', 'mspet_ord1m3',
                 'mspet1m3_nofilt_ref100', 'psd_nofilt_ref100', 'psd', 'psd_nofilt', 'psd_notch',
-                'psd_hd', 'pe_hd', 'pet1m3_30hz', 'pred', 'psd_v2']:
+                'psd_hd', 'pe_hd', 'pet1m3_30hz', 'pred', 'psd_v2', 'psd_unnorm', 'mspe_from_epochs']:
         with open(fname, 'wb') as f:
             pickle.dump(var, f)
+    elif typ in ['epoch']:
+        var.save(fname)
     else:
         raise NotImplementedError()
         return False

@@ -1,4 +1,11 @@
-def read_raw(setup, sheet):
+'''
+(1) Read raw edf data and coresponding staging
+(2) Segment data into 30s epochs, save as mne object (used for PSD analysis)
+(3) Segment data into 30s epochs, compute MSPE, save
+Note: there are two excell sheets with staging 'St_Pr_corrected_27min' or 'St_Pr_corrected_35min',
+    set as function argument
+'''
+def read_raw(sheet, setup='mspet1m3'):
     import mne
     from mne import io
     import os
@@ -9,14 +16,13 @@ def read_raw(setup, sheet):
     from config import raw_path, stag_fname, mysave, pe_par
     from IPython.core.debugger import set_trace
     from config import paths
+    from mne.time_frequency import psd_welch
+    from mne.io import RawArray
+    from scipy.signal import welch
+    from scipy.integrate import simps
 
     fnames_ = sorted(list(filter(lambda x: x.endswith('.edf'), os.listdir(raw_path))))
     fnames = [i.split('.edf')[0] for i in fnames_] #delete .edf from fname
-    #just for counting
-    #fnames_100_ = [i for i in fnames if '_ref100' in i]
-    #fnames_100_1_ = [i for i in fnames_100_ if '_1_' in i]
-    #fnames_100_2_ = [i for i in fnames_100_ if '_2_' in i]
-
     ss = pd.read_excel(stag_fname, sheet_name=sheet)
 
     ss = my_rename_col(ss)
@@ -25,13 +31,7 @@ def read_raw(setup, sheet):
     if setup != 'psd':
         embed = pe_par[setup]['embed']
         tau = pe_par[setup]['tau']
-    #set typ_name for saving
-    #if setup.startswith('pe'):
-    #    typ_name = 'pet' + str(tau) + 'm' + str(embed)
-    #elif setup.startswith('mspe'):
-    #    typ_name = 'mspet' + str(tau) + 'm' + str(embed) + '_nofilt_ref100'
-    #elif setup == 'psd':
-    #    typ_name = setup + '_nofilt_ref100'
+
     # set bad sbjs, defined by inspecting excell dat (e.g red annotations by Heidi)
     if sheet == 'St_Pr_corrected_27min':
         # all but 213_2 considered as nicht auswertbar.
@@ -52,6 +52,34 @@ def read_raw(setup, sheet):
                             stim_channel=None)
         #return preproces(raw), stag # apply pp.
         return raw, stag #no filtering
+
+
+    def compute_psd_segm(raw, window=30):
+        from mne.time_frequency import psd_welch
+        from mne.io import RawArray
+
+        def get_raw_array(data):
+            ch_types  = ['eeg'] * chan_len
+            info = mne.create_info(ch_names=raw.ch_names, sfreq=sfreq, ch_types=ch_types)
+            raw_array = RawArray(data, info=info)
+            return raw_array
+
+        data = raw.get_data()
+        sfreq = raw.info['sfreq']
+        length_dp = len(raw.times)
+        window_dp = int(window*sfreq)
+        no_epochs = int(length_dp // window_dp)
+        chan_len = len(raw.ch_names)
+        store_psd = []
+        for i in range(no_epochs):
+            e_ = data[...,:window_dp]
+            data = np.delete(data, np.s_[:window_dp], axis =1 )
+            ra = get_raw_array(e_)
+            psd, freqs = psd_welch(ra ,fmin=1,fmax=30)
+            #psd = 10 * np.log10(psd) # log is done latter on, in wrap_psd.py
+            store_psd.append(psd)
+        #psd array of shape [freqs, channs, epochs]
+        return freqs, np.asarray(store_psd).transpose(2,1,0)
 
     def compute_pe_segm(raw, embed=3, tau=1, window=30, mspe=False):
         data = raw.get_data()
@@ -77,81 +105,7 @@ def read_raw(setup, sheet):
                 else:
                     m[j,i] = ent.permutation_entropy(e_[j], m=embed, delay=tau)
             del e_
-
         return m
-
-
-    def relative_power(data, sf, band, window_sec=1.):
-        # Adapted from https://raphaelvallat.com/bandpower.html
-        """Compute the average power of the signal x in a specific frequency band.
-
-        Parameters
-        ----------
-        data : 2d-array
-            Input signal in the chs x time-domain.
-        sf : float
-            Sampling frequency of the data.
-        band : list
-            Lower and upper frequencies of the band of interest.
-        window_sec : float
-            Length of each window in seconds.
-            If None, window_sec = (1 / min(band)) * 2
-
-        """
-        from scipy.signal import welch
-        from scipy.integrate import simps
-        band = np.asarray(band)
-        low, high = band
-        data = data * 10e5
-        # Define window length
-        if window_sec is not None:
-            nperseg = window_sec * sf
-        else:
-            nperseg = (2 / low) * sf
-
-        rel_psd = np.zeros((11, 30)) #empty array define #freqs bins !!
-
-        for chi in range(data.shape[0]): #iterate channels
-            # Compute the modified periodogram (Welch)
-            freqs, psd = welch(data[chi, :], sf, nperseg=nperseg)
-            # Frequency resolution
-            freq_res = freqs[1] - freqs[0]
-            # Find closest indices of band in frequency vector
-            idx_band = np.logical_and(freqs >= low, freqs <= high)
-            # Integral approximation of the spectrum using Simpson's rule.
-            #bp = simps(psd[idx_band], dx=freq_res)
-            #  OR simple sum over bins, Relative power see: Xiao(2018) 'Electroencephalography power and coherence changes with age and motor skill'
-            bp = psd[idx_band].sum()
-            rel_psd[chi, :] = psd[idx_band] / bp
-        return rel_psd, freqs[idx_band]
-
-    def compute_psd_segm(raw, window=30):
-        def get_raw_array(data):
-            from mne.io import RawArray
-            ch_types  = ['eeg'] * chan_len
-            info = mne.create_info(ch_names=raw.ch_names, sfreq=sfreq, ch_types=ch_types)
-            raw_array = RawArray(data*10e5, info=info) #convert to volts
-            return raw_array
-
-        data = raw.get_data()
-        sfreq = raw.info['sfreq']
-        length_dp = len(raw.times)
-        window_dp = int(window*sfreq)
-        no_epochs = int(length_dp // window_dp)
-        chan_len = len(raw.ch_names)
-        store_psd = []
-        for i in range(no_epochs):
-            e_ = data[...,:window_dp]
-            data = np.delete(data, np.s_[:window_dp], axis =1 )
-            #ra = get_raw_array(e_) #for welch by mne
-            #psd, freqs = psd_welch(ra ,fmin=1,fmax=30, n_per_seg=4*sfreq)
-            psd, freqs = relative_power(e_, sfreq, [1.,30.])
-            store_psd.append(psd)
-        #psd array of shape [freqs, channs, epochs]
-        return freqs, np.asarray(store_psd).transpose(2,1,0)
-
-
-
 
     def encode(stag):
         stages_coding = {'N' : 1, 'R' : 2, 'W' : 3,'X' : 4, 'XW' : 5, 'WR' : 6, 'RW' : 7, 'XR' : 8, 'WN' : 9}
@@ -159,7 +113,6 @@ def read_raw(setup, sheet):
         return stag
 
     idfs = map_stag_with_raw(fnames, ss, sufx='ref119')
-    #idfs = map_stag_with_raw(fnames, s, sufx='1heog')
     idfs = {i : v for i, v in idfs.items() if len(v) >= 1} # drop empty
     idfs = {i : v for i, v in idfs.items() if 'P' not in i} # drop Prechtls
     #write idfs df to excel
@@ -170,23 +123,58 @@ def read_raw(setup, sheet):
     #sbj = '113_2_S'
     #idfs = {k : v for k,v in idfs.items() if k == sbj}
 
+
+    def raw_to_epochs_using_annotations(raw, stag, k):
+        if k.startswith('110_2'): #see annot by HL in excel; BL shorter
+            stag = stag.iloc[:66]
+        if k.startswith('236_2'):
+            stag  = stag[1:] #see annot by HL in excel; BL shorter
+        stag = stag.dropna()
+        sfreq = raw.info['sfreq']
+        n_epochs = np.floor(raw.times[-1] / 30).astype(int)
+        if len(stag) - n_epochs == 1:# can be shorter due to windowing
+            stag = stag[:-1]
+        raw.info['meas_date'] = 0
+        onset = np.arange(0, raw.times[-1], 30 )[:-1]
+        duration = [30] * n_epochs
+        description = stag[k].values
+        annotations = mne.Annotations(onset, duration, description, orig_time=0)
+        raw.set_annotations(annotations)
+        event_id  = {'N' : 1,
+                    'R' : 2,
+                    'W' : 3,
+                    'X' : 4,
+                    'XW' : 5,
+                    'WR' : 6,
+                    'RW' : 7,
+                    'XR' : 8,
+                    'WN' : 9}
+        events, event_id_this = mne.events_from_annotations(
+                    raw, event_id=event_id, chunk_duration=30.)
+        raw.info['meas_date'] = None
+        tmax = 30. - 1. / raw.info['sfreq']  # tmax in included
+        epochs = mne.Epochs(raw=raw, events=events,
+                          event_id=event_id_this, tmin=0., tmax=tmax, baseline=None)
+        return epochs
+
     for k, v in sorted(idfs.items()):
         k_short = k.split('_S')[0]
         p = paths(typ=setup, sbj=k_short) #path to a folder
-        #if os.path.exists(p):
-        #    continue
-        #
         if k not in bad:
             print (k)
             raw, stag = load_raw_and_stag(k, v[0])
-
             raw, _ = order_channels(raw) #reorder channels, add zeros for missings (EMG usually)
             stag = encode(stag)
-            #pe = compute_pe_segm(raw, embed=embed, tau=tau, mspe=True)
-            freqs, psd = compute_psd_segm(raw, window=30)
-            #set_trace()
-            mysave(var = [stag, psd, freqs], typ='psd_v2', sbj=k[:5])
+            epochs = raw_to_epochs_using_annotations(raw,stag,k)
+            mysave(var=epochs, typ='epoch', sbj=k[:5])
+            pe = compute_pe_segm(raw, embed=embed, tau=tau, mspe=True)
             #mysave(var = [stag, pe], typ='mspet1m3', sbj=k[:5])
+            #freqs, psd = compute_psd_segm(raw, window=30)
+            #mysave(var = [stag, psd, freqs], typ='psd', sbj=k[:5])
         elif k in bad:
             print ('Sbj dropped, see red annot. by H.L in excel file')
             continue
+
+if __name__ == "__main__":
+    import sys
+    read_raw(sys.argv[1], sys.argv[2])

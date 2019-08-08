@@ -462,7 +462,7 @@ def load_single_append(path, fnames, typ):
             print('Folder is empty')
             counter += 1
             continue
-        if typ in ['psd', 'psd_nofilt', 'psd_nofilt_ref100', 'psd_hd', 'psd_v2']:
+        if typ in ['psd', 'psd_nofilt', 'psd_nofilt_ref100', 'psd_hd', 'psd_v2', 'psd_unnorm']:
             stag, pe, freqs = myload(typ=typ, sbj=s) # for psd load freqs bins
 
         else:
@@ -713,3 +713,46 @@ def get_unique_name_list(names1,names2):
     names1 = [names1[i].split('_')[0] for i in range(len(names1))]
     names2 = [names2[i].split('_')[0] for i in range(len(names2))]
     return sorted(list(set(names1 + names2)))
+
+
+def relative_power(data, sf, band, window_sec=1.):
+    # Adapted from https://raphaelvallat.com/bandpower.html
+    """Compute the average power of the signal x in a specific frequency band.
+
+    Parameters
+    ----------
+    data : 2d-array
+        Input signal in the chs x time-domain.
+    sf : float
+        Sampling frequency of the data.
+    band : list
+        Lower and upper frequencies of the band of interest.
+    window_sec : float
+        Length of each window in seconds.
+        If None, window_sec = (1 / min(band)) * 2
+
+    """
+    band = np.asarray(band)
+    low, high = band
+    data = data * 10e5
+    # Define window length
+    if window_sec is not None:
+        nperseg = window_sec * sf
+    else:
+        nperseg = (2 / low) * sf
+
+    rel_psd = np.zeros((11, 30)) #empty array define #freqs bins !!
+
+    for chi in range(data.shape[0]): #iterate channels
+        # Compute the modified periodogram (Welch)
+        freqs, psd = welch(data[chi, :], sf, nperseg=nperseg)
+        # Frequency resolution
+        freq_res = freqs[1] - freqs[0]
+        # Find closest indices of band in frequency vector
+        idx_band = np.logical_and(freqs >= low, freqs <= high)
+        # Integral approximation of the spectrum using Simpson's rule.
+        #bp = simps(psd[idx_band], dx=freq_res)
+        #  OR simple sum over bins, Relative power see: Xiao(2018) 'Electroencephalography power and coherence changes with age and motor skill'
+        bp = psd[idx_band].sum()
+        rel_psd[chi, :] = psd[idx_band] / bp
+    return rel_psd, freqs[idx_band]
