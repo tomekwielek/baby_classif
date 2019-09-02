@@ -165,17 +165,17 @@ def plot_mygrid(data2, data5, null2, null5, df, myxticklab ):
     ax5= plt.subplot(gs1[1, :])
 
     sns.barplot(x='time', y = 'acc', data=data2,  ax=ax1, estimator=median, ci=95, color='grey', \
-                edgecolor='black')
+                edgecolor='black',  errcolor='black', n_boot=1000)
     ax1.axhline(y=mean(null2.ravel()), linestyle='--', color='red', alpha=0.5)
     ax2.hist(null2.ravel(), bins=20, orientation='horizontal', color='darkgrey', edgecolor='black')
 
     sns.barplot(x='time', y = 'acc', data=data5,  ax=ax3, estimator=median, ci=95, color='grey', \
-                edgecolor='black')
+                edgecolor='black', errcolor='black', n_boot=1000)
     ax3.axhline(y=mean(null5.ravel()), linestyle='--', color='red', alpha=0.5)
     ax4.hist(null5.ravel(), orientation='horizontal', bins=12, color='darkgrey', edgecolor='black')
 
     sns.barplot(x='time', y = 'value', hue='variable', data=df,  ax=ax5, estimator=median,
-                ci=95, edgecolor='black')
+                ci=95, n_boot=1000, edgecolor='black', errcolor='black')
 
     ax1.set(ylim=[0,90], xlabel='',  ylabel='Accuracy [%]', xticklabels=[],  xticks=[], \
             yticklabels=range(0,90,10),  yticks=range(0,90,10))
@@ -200,9 +200,12 @@ def plot_mygrid(data2, data5, null2, null5, df, myxticklab ):
 #plot within
 plot_mygrid(acc_2, acc_5, null_acc_2, null_acc_5, f1_cat_melt, myxticklab=['week2 trained\nweek2 tested', \
                                                                         'week5 trained\nweek5 tested'])
+
+plt.savefig('within.tif', dpi=300)
 #plot cross
 plot_mygrid(acc_52, acc_25, null_acc_52, null_acc_25, f1_cross_cat_melt, myxticklab=['week5 trained\nweek2 tested', \
                                                                                     'week2 trained\nweek5 tested'])
+plt.savefig('cross.tif', dpi=300)
 ####################################################################################################
 #PLOT WITHIN PRECISSION RECALL
 '''
@@ -394,15 +397,16 @@ ax.set( ylabel='Accuracy [%]', xlabel='', xticks=[0,1], ylim= [50, 75],\
 
 matplotlib.rcParams.update({'font.size': 15})
 
-U, pval = mann(df['five'], df['two2five'])
-print pval
+#U, pval = mann(df['five'], df['two2five'])
+#print pval
 
 #plot xonfusion matrix for week 2 and week 5
 plot_confusion_matrix(cm2, ['NREM', 'REM', 'WAKE'], title='week2', normalize=True)
+plt.savefig('week2_cm.tif', dpi=300)
 plot_confusion_matrix(cm5, ['NREM', 'REM', 'WAKE'], title='week5', normalize=True)
+plt.savefig('week5_cm.tif', dpi=300)
 plot_confusion_matrix(cm25, ['NREM', 'REM', 'WAKE'], title='week2->week5', normalize=True)
 plot_confusion_matrix(cm52, ['NREM', 'REM', 'WAKE'], title='week5->week2', normalize=True)
-
 
 
 #F1 scoresce stat

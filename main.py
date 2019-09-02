@@ -5,17 +5,14 @@ from functional import (select_class_to_classif, cat_pe_stag, load_single_append
                         count_stag, vis_clf_probas, write_pickle, read_pickle, plot_confusion_matrix,\
                         plot_acc_depending_scale, remove_20hz_artif, get_unique_name_list)
 from matplotlib import pyplot as plt
-from read_raw import *
 from mne import io
 import pandas as pd
 import pickle
 import seaborn as sns
-#from classify_with_shuffling_v2 import classify_shuffle
-from classify_with_shuffling_v2_old import classify_shuffle
+from classify_with_shuffling_v2 import classify_shuffle
 from collections import defaultdict
 from IPython.core.debugger import set_trace
 from config import bad_sbjs_1, bad_sbjs_2
-#from plot_pe_psd_stag import plot_data
 
 path = 'H:\\BABY\\working\subjects'
 fnames =  os.listdir(path)
@@ -25,8 +22,8 @@ sel_idxs = [1,2,3]
 time = 5 # if 2 week2, elif 5 week5, elif 'cat' concatenate
 n_folds = 2
 
-setup = 'psd'
-#setup = 'mspet1m3'
+#setup = 'psd'
+setup = 'mspet1m3'
 #iterate to compare statistically psd vs mspe based
 #store_perfs = {'s1':[], 's2': [], 's3': [], 's4': []}
 #store_perfs = {'mspet1m3' : [], 'psd' : []}
@@ -35,7 +32,7 @@ store_perfs = []
 #for setup in ['mspet1m3', 'psd']:
 #for s in [1,2,3,4]: #taus
 #for i in range(2):
-s = 5 #taus no
+s = 4 # use scales in range from 0 to s
 
 mspe1, mspe_stag1, mspe_names1, _ = load_single_append(path, fnames1, typ='mspet1m3')
 mspe2, mspe_stag2, mspe_names2, _ = load_single_append(path, fnames2, typ='mspet1m3')
@@ -52,21 +49,15 @@ del (psd_stag1, psd_stag2)
 total_count_stag1 = [ len(mspe_stag1[i]) for i in range(len(mspe_stag1)) ]
 total_count_stag2 = [ len(mspe_stag2[i]) for i in range(len(mspe_stag2)) ]
 
-#mspe1, psd1, stag1, count_artifs1 = remove_20hz_artif(mspe1, psd1, mspe_stag1, mspe_names1, freqs, bad_sbjs_1)
-#mspe2, psd2, stag2, count_artifs2 = remove_20hz_artif(mspe2, psd2, mspe_stag2, mspe_names2, freqs, bad_sbjs_2)
-stag1 = mspe_stag1 #when no artif corr
-stag2 = mspe_stag2 #when no artif corr
+mspe1, psd1, stag1, count_artifs1 = remove_20hz_artif(mspe1, psd1, mspe_stag1, mspe_names1, freqs, bad_sbjs_1)
+mspe2, psd2, stag2, count_artifs2 = remove_20hz_artif(mspe2, psd2, mspe_stag2, mspe_names2, freqs, bad_sbjs_2)
+#stag1 = mspe_stag1 #when no artif corr
+#stag2 = mspe_stag2 #when no artif corr
 
 mspe1, stag1, _ = select_class_to_classif(mspe1, stag1, sel_idxs=sel_idxs)
 mspe2, stag2, _ = select_class_to_classif(mspe2, stag2, sel_idxs=sel_idxs)
 psd1, stag1, _ = select_class_to_classif(psd1, stag1, sel_idxs=sel_idxs)
 psd2, stag2, _ = select_class_to_classif(psd2, stag2, sel_idxs=sel_idxs)
-
-#Get percentage of epochs different than [NREM, REM, WAKE] (run on data without 20Hz correct)
-ratio_stag1 = 100 - np.asarray([ len(stag1[i]) for i in range(len(stag1)) ]).sum() / \
-             float(np.asarray(total_count_stag1).sum() ) * 100
-ratio_stag2 = 100 - np.asarray([ len(stag2[i]) for i in range(len(stag2)) ]).sum() / \
-             float(np.asarray(total_count_stag2).sum() ) * 100
 
 
 
@@ -110,7 +101,7 @@ idx_plot = 1
 perf  = classify_shuffle(data_pe, data_stag, idx_plot, myshow=True, check_mspe=True, null=False,
                             n_folds=n_folds, search=False)
 #print accuracy
-print np.asarray([perf[i][0] for i in range(len(perf))]).mean()
+print(np.asarray([perf[i][0] for i in range(len(perf))]).mean())
 
 #print importances
 #imp = dict()
@@ -137,7 +128,7 @@ print np.asarray([perf[i][0] for i in range(len(perf))]).mean()
 #store_perfs[setup].extend([perf])
 
 
-
+'''
 #Run shuffling
 nulliter  = 100
 null_perfs = []
@@ -152,3 +143,4 @@ write_pickle(null_perfs, 'null_week5.txt')
 
 d = read_pickle('psd_cat_null_week5.txt')
 dd = np.asarray([np.asarray([d[i][j][2] for j in range(len(d[0]))]) for i in range(len(d))])
+'''

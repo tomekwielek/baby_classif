@@ -12,8 +12,8 @@ from mne.stats import permutation_cluster_test
 import seaborn as sns
 from matplotlib.patches import Patch
 
-matplotlib.rcParams.update({'font.size': 12,'xtick.labelsize':8, 'ytick.labelsize':8})
-np.random.seed(12)
+matplotlib.rcParams.update({'font.size': 16,'xtick.labelsize':18, 'ytick.labelsize':14})
+np.random.seed(18)
 
 path = 'H:\\BABY\\working\\subjects'
 fnames =  os.listdir(path)
@@ -23,6 +23,7 @@ fnames2 = [f for f in fnames if f.endswith('2')] #filter folders
 events_id = ['N', 'R', 'W']
 events_id_map = {'N':1, 'R':2, 'W':3}
 scale_idx = 0
+drop_outliers = False
 
 # Set config for plotting (e.g what channels)
 pick_chann = ['F3', 'F4', 'C3', 'C4', 'O1', 'O2'] # set what channels mspe was computed for
@@ -34,21 +35,20 @@ def my_bootstraper(data, ch_indices, repetions=1000, n=10):
     data[i].shape = n_chs x n_epochs where i=sbj index
     '''
     np.random.seed(None) # randomly initialize the RNG from some platform-dependent source
-    store_repet = np.zeros([repetions, len(data)])
+    store_repet = np.zeros([repetions, len(data), len(plot_chann), n])
+    store_repet.fill(np.nan)
     for i in range(repetions):
-        store = []
-        for d_ in data:
+        for j, d_ in enumerate(data):
             count = d_.shape[1]
             if count == 0:
-                store.append(np.nan)
+                store_repet[i, j, :, :] = np.nan
             else:
                 sample = np.min([n, count]) # if n<count mean over count
                 epoch_indices = np.random.choice(count, sample)
-                av = d_[ch_indices, :] #sample channels
-                av = av[:, epoch_indices] #sample epochs
-                store.append(av.mean())
-        store_repet[i,:] = store
-    return store_repet
+                this_sample = d_[ch_indices, :] #sample channels
+                this_sample = this_sample[:, epoch_indices] #sample epochs
+                store_repet[i, j, :, :this_sample.shape[1]] = this_sample
+    return store_repet.transpose((1,0,2,3))
 
 def build_df(mydict, time='week2'):
     '''
@@ -67,6 +67,21 @@ def build_df(mydict, time='week2'):
     mydf = mydf.set_index(sbjs['new_idx'])
     return mydf
 
+def remove_outliers_from_df(data):
+    df = data.copy()._get_numeric_data()
+    df_mask = pd.DataFrame(columns = data.copy().columns)
+    for (column, data) in df.iteritems():
+        q1 = data.dropna().quantile(.25)
+        q3 = data.dropna().quantile(.75)
+        iqr = q3 - q1
+        lower_bound = q1 -(1.5 * iqr)
+        upper_bound = q3 +(1.5 * iqr)
+        mask = np.zeros(len(data), dtype=bool)
+        for i, y in enumerate(data):
+            if y < lower_bound or y > upper_bound:
+                mask[i] = True
+        df_mask[column] = mask
+    return(df_mask)
 
 # LOAD mspe
 store = {'week2':[], 'week5':[]}
@@ -78,7 +93,7 @@ for data, time, bad in zip([fnames1, fnames2], ['week2', 'week5'], [bad_sbjs_1, 
         if len(os.listdir(os.path.dirname(paths(typ='mspe_from_epochs', sbj=sbj)))) == 0: #emty folder means bad sbj
             continue
         else:
-            stag, mspe = myload(typ='mspe_from_epochs', sbj=sbj)
+            stag, mspe = myload(typ='mspe_from_epochs', sbj=sbj) #find_drop_20hz already done
             mspe = mspe[scale_idx, :, :]
             store[time].append(mspe)
             store_event[time].append(stag)
@@ -109,7 +124,8 @@ for time in ['week2', 'week5']:
         mspe_stage  = [ mspes[i][:, finder[i]] for i in range(len(mspes)) ]
 
         boots = my_bootstraper(mspe_stage, ch_indices=ch_indices, repetions=1000, n=10)
-        boots = np.nanmean(boots, 0) #av bootstraped averages
+        boots = np.nanmean(boots, axis=(1,2,3)) #av bootstraped samples
+        #set_trace()
         mydict[time][stag_name]['value'] = boots
         mydict[time][stag_name]['sbj'] = nonempty_sbj
 
@@ -117,89 +133,39 @@ for time in ['week2', 'week5']:
 df2 = build_df(mydict, time='week2').reset_index()
 df5 = build_df(mydict, time='week5').reset_index()
 
+# Drop outliers
+if drop_outliers:
+    mymask2 = remove_outliers_from_df(df2) #create boolean mask
+    mymask2 = mymask2._get_numeric_data().values
+    df2_masked = df2.copy()._get_numeric_data().mask(mymask2)
+    df2_masked['new_idx'] = df2['new_idx'] #remove outliers
+    del df2
+    df2 = df2_masked
+
+    mymask5 = remove_outliers_from_df(df5) #create boolean mask
+    mymask5 = mymask5._get_numeric_data().values
+    df5_masked = df5.copy()._get_numeric_data().mask(mymask5)
+    df5_masked['new_idx'] = df5['new_idx'] #remove outliers
+    del df5
+    df5 = df5_masked
+
 # Reshape pandas df to long format
 df2 = df2.melt(var_name = ['time', 'stag'], id_vars = ['new_idx'] )
 df5 = df5.melt(var_name = ['time', 'stag'], id_vars = ['new_idx'])
 
+# Concatenate week2 and week5 to single data frame
 df = pd.concat([df2, df5], axis=0, sort=True)
 df['name_id_short'] = [n.split('_')[0] for n in df['new_idx']]
-
 #df.fillna('NaN').to_csv('_'.join(plot_chann)+ 'mspe_scale' + str(scale_idx+1) + '.csv')
-'''
-df['channels'] = ['front'] * len(df)
-df_front = df
-DF = pd.concat([df_front, df_cent, df_occip], axis=0)
-DF.fillna('NaN').to_csv('_'.join(plot_chann)+ 'channels_mspe_scale' + str(scale_idx+1) + '.csv')
-'''
-
-def detect_outlier(data):
-    outliers = np.zeros(len(data))
-    sorted(data)
-    q1, q3= np.percentile(data,[25,75])
-    iqr = q3 - q1
-    lower_bound = q1 -(1.5 * iqr)
-    upper_bound = q3 +(1.5 * iqr)
-    for i, d in enumerate(data):
-        if d < lower_bound or d > upper_bound:
-            outliers[i] = True
-        else:
-            outliers[i] = False
-    return outliers
 
 
-def remove_outliers_from_df(df):
-    new_df = pd.DataFrame(columns=df.columns)
-    for (column, data) in df.iteritems():
-        if 'new_idx' in column:
-            new_df[column] = df[column]
-            continue
-        data = data.dropna()
-        #sorted(data)
-        outliers = np.zeros(len(data), dtype=bool)
-        q1, q3= np.percentile(data,[25,75])
-        iqr = q3 - q1
-        lower_bound = q1 -(1.5 * iqr)
-        upper_bound = q3 +(1.5 * iqr)
-        for i, y in enumerate(data):
-            #set_trace()
-            if y < lower_bound or y > upper_bound:
-                out = np.where(data == y)
-                set_trace()
-                outliers[i] = True
-            else:
-                outliers[i] = False
-        #set_trace()
-        new_df[column] = data[np.logical_not(outliers)]
-    return new_df
+# Add channels as column (loop manualy over channels)
+#df['channels'] = ['front'] * len(df)
+#df_front = df.copy()
 
-
-def remove_outliers_from_df(df):
-    df1 = df.copy()
-    df = df._get_numeric_data()
-
-    for (column, _) in df.iteritems():
-        df[column].fillna(df[column].median())
-        set_trace()
-        q1 = df[column].quantile(.25)
-        q3 = df[column].quantile(.75)
-        mask = df[column].between(q1, q3, inclusive=True)
-        iqr = df.loc[mask, column]
-    return(df1)
-
-dff = remove_outliers_from_df(df5)
-
-
-
-
-
-
-
-
-
-dd = df5['week5']['NREM']['value'].dropna()
-out = detect_outlier(dd)
-
-
+# Concatenate dfs containing different channels data
+#DF = pd.concat([df_front, df_cent, df_occip], axis=0)
+#DF.fillna('NaN').to_csv('_'.join(plot_chann)+ 'channels_mspe_scale' + str(scale_idx+1) + '_outliers_dropped.csv')
 
 # Plot boxes
 fig, ax = plt.subplots()
@@ -233,21 +199,5 @@ legend_elements = [Patch(facecolor='white', edgecolor='black',
 ax.legend(handles=legend_elements, loc='lower right')
 ax.set(ylabel= 'MSPE(scale={}) [bit]'.format(scale_idx+1), xlabel='', xticklabels= ['NREM', 'REM', 'WAKE'], ylim=[1.2, 1.7])
 plt.suptitle(' '.join(plot_chann))
-#plt.savefig('_'.join(plot_chann)+ 'mspe.tif', dpi=300)
-'''
-#ax.plot([-0.2, -0.2, 0.2, 0.2], [1.63, 1.64, 1.64, 1.63], linewidth=1, color='black')
-ax.plot([-0.2, -0.2, 0.2, 0.2], [1.67, 1.68, 1.68, 1.67], linewidth=1, color='black')
-#ax.plot([0.8, 0.8, 1.2, 1.2], [1.63, 1.64, 1.64, 1.63], linewidth=1, color='black')
-ax.plot([0.8, 0.8, 1.2, 1.2], [1.67, 1.68, 1.68, 1.67], linewidth=1, color='black')
-#ax.plot([1.8, 1.8, 2.2, 2.2], [1.63, 1.64, 1.64, 1.63], linewidth=1, color='black')
-ax.plot([1.8, 1.8, 2.2, 2.2], [1.67, 1.68, 1.68, 1.67], linewidth=1, color='black')
-#ax.text(-0.07, 1.645, 'p<.05', color='black', size=10)
-#ax.text(0.93, 1.645, 'p<.05', color='black', size=10)
-#ax.text(1.95, 1.645, 'ns', color='black', size=10)
-ax.text(-0.07, 1.685, 'p<.05', color='black', size=10)
-ax.text(0.93, 1.685, 'p=.06', color='black', size=10)
-ax.text(1.95, 1.685, 'ns', color='black', size=10)
-'''
-plt.rcParams.update({'font.size': 15})
-#pyplot.locator_params(axis='y', nbins=8)
-#plt.show()
+plt.show()
+plt.savefig('_'.join(plot_chann)+ 'mspe_scale{}.tif'.format(scale_idx+1), dpi=300)

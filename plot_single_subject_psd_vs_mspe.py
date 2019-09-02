@@ -21,7 +21,7 @@ events_id = ['N', 'R', 'W']
 sbj = '110_2'
 pick_chann = ['F3', 'F4', 'C3', 'C4', 'O1', 'O2']
 scale = 4
-ch_idx  = 4
+ch_idx  = 0
 
 epoch = myload(typ='epoch', sbj=sbj)
 epoch = epoch[events_id]
@@ -131,11 +131,11 @@ ax2.set_position(pos2_ch)
 psds = 10 * np.log10(psds)
 plot_psd(psds,  ax=ax1, ch_idx=ch_idx)
 plot_stag(stag, ax2)
-plt.show()
+#plt.show()
 #plt.savefig('single_subject_psd.tif', dpi=300)
 
 # Plot mspe as box plots
-matplotlib.rcParams.update({'font.size': 16,'xtick.labelsize':20, 'ytick.labelsize':14})
+matplotlib.rcParams.update({'font.size': 16,'xtick.labelsize':20, 'ytick.labelsize':14, 'axes.titlesize': 'small'})
 df = pd.DataFrame.from_dict(mydict['mspe'], orient='index')
 df = df.T.reset_index()
 df = df.melt(value_vars= ['NREM', 'REM', 'WAKE'] )

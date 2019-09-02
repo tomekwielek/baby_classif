@@ -59,6 +59,7 @@ def paths(typ, c=None, sbj='sbj_av'):
     path_template = dict(
         raws=this_path,
         epoch = op.join(this_path, '%s-epo.fif' % (sbj)),
+        epoch_hd = op.join(this_path, '%s-epo.fif' % (sbj)),
         base_path=base_path,
         data_path=this_path,
         pet1m3= op.join(this_path, '%s.txt' % sbj),
@@ -101,7 +102,7 @@ def myload(typ, sbj, c=None):
         with open(fname, 'rb') as f:
             out = pickle.load(f, encoding='latin1')
             #out = pickle.load(f)
-    elif typ in ['epoch']:
+    elif typ in ['epoch', 'epoch_hd']:
         epochs_path = fname
         out = read_epochs(fname, preload=True)
     else:
@@ -122,7 +123,7 @@ def mysave(var, typ, sbj='sbj_av',  overwrite=True):
                 'psd_hd', 'pe_hd', 'pet1m3_30hz', 'pred', 'psd_v2', 'psd_unnorm', 'mspe_from_epochs']:
         with open(fname, 'wb') as f:
             pickle.dump(var, f)
-    elif typ in ['epoch']:
+    elif typ in ['epoch', 'epoch_hd']:
         var.save(fname)
     else:
         raise NotImplementedError()

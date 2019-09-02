@@ -5,7 +5,6 @@ from functional import (select_class_to_classif, cat_pe_stag, load_single_append
                         count_stag, vis_clf_probas, write_pickle, read_pickle, plot_confusion_matrix,\
                         plot_acc_depending_scale, remove_20hz_artif)
 from matplotlib import pyplot as plt
-from read_raw import *
 from mne import io
 import pickle
 from IPython.core.debugger import set_trace
@@ -30,11 +29,12 @@ fnames =  os.listdir(path)
 fnames1 = [f for f in fnames if f.endswith('1')]
 fnames2 = [f for f in fnames if f.endswith('2')] #filter folders
 sel_idxs = [1,2,3]
-time = 2  # if 2 week2, elif 5 week5, elif 'cat' concatenate
+time = 5  # if 2 week2, elif 5 week5, elif 'cat' concatenate
 n_folds = 2
 
 setup = 'mspet1m3'
 s = 5 #taus no
+plt.rcParams.update({'font.size': 18})
 
 mspe1, mspe_stag1, mspe_names1, _ = load_single_append(path, fnames1, typ='mspet1m3')
 mspe1_nf, _, _, _ = load_single_append(path, fnames1, typ='mspet1m3_nofilt')
@@ -94,10 +94,10 @@ for _, out_idx in kf.split(range(no_sbjs)):
     no_samples =  dict([(1, 100), (2, 100), (3, 100)])
     rus = RandomUnderSampler(random_state=0, ratio=no_samples)
     rus.fit(X_train, y_train)
-    X_train, y_train = rus.fit_resample(X_train, y_train)
+    X_train, y_train = rus.sample(X_train, y_train)
     rus = RandomUnderSampler(random_state=0, ratio=no_samples)
     rus.fit(X_test, y_test)
-    X_test, y_test = rus.fit_resample(X_test, y_test)
+    X_test, y_test = rus.sample(X_test, y_test)
 
     X_train_embedded = MDS(n_components=2).fit_transform(X_test)
     #X_train_embedded = TSNE(n_components=2).fit_transform(X_test)

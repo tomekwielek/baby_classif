@@ -41,7 +41,7 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
         fig.text(0.05, 0.95, f1_str, size = 22)
 
         ax.legend()
-        plt.savefig('somefig.tif')
+        plt.savefig('somefig.tif', dpi=300)
         plt.show()
         plt.close()
 
@@ -107,10 +107,10 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
         #X_test = StandardScaler().fit_transform(X_test)
 
         #resample
-        rus = RandomUnderSampler(random_state=0)#, ratio=no_samples)
+        rus = RandomUnderSampler(random_state=0) #, ratio=no_samples)
         rus.fit(X_train_val, y_train_val)
         X_train_val, y_train_val = rus.sample(X_train_val, y_train_val)
-        rus = RandomUnderSampler(random_state=0)#, ratio=no_samples)
+        rus = RandomUnderSampler(random_state=0) #, ratio=no_samples)
         rus.fit(X_test, y_test)
         X_test, y_test = rus.sample(X_test, y_test)
 
@@ -140,6 +140,7 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
             if idx_plot in out_idx:
                 pred_plot = clf.predict(X_plot)
                 acc_pred_plot = accuracy_score(pred_plot, y_plot)
+
             #imps = clf.feature_importances_.reshape((5,11)) #overall importances
             #impportances = clf.feature_importances_
             imps = []
@@ -159,10 +160,9 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
 
         perf.append((acc, cmx, recall, precission, f1_perclass, result_imps))
 
-    #plot_sinlge_sbj(pred_plot, stag_plot['numeric'], acc_pred_plot)
+    plot_sinlge_sbj(pred_plot, stag_plot['numeric'], acc_pred_plot)    
+
     return perf
-
-
 
 
 def class_feature_importance(X, Y, feature_importances):

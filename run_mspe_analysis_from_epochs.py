@@ -1,5 +1,5 @@
 '''
-XX analysis, statistics, visualisation
+MSPE analysis, statistics, visualisation
 '''
 import mne
 import os

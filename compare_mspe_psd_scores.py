@@ -24,19 +24,21 @@ psd = my_load(fname2)
 
 psdacc = [psd[i][0] for i in range(len(psd))]
 mspeacc = [mspe[i][0] for i in range(len(mspe))]
-u, p = mann([psdacc, mspeacc])
+u, p = mann(psdacc, mspeacc)
 
 fig, ax =plt.subplots(1, figsize=(6,6))
 df = pd.DataFrame({'psd' : psdacc, 'mspe':mspeacc})
 df = pd.melt(df)
 sns.boxplot(x='variable', y='value', data=df, order=['psd', 'mspe'], ax=ax)
 sns.swarmplot(x='variable', y='value', data=df, order=['psd', 'mspe'], color='black',ax=ax)
-ax.set(ylabel='Accuracy [%]', xlabel='', xticklabels=['PSD', 'MSPE'])
+ax.set(ylabel='Accuracy [%]', xlabel='', xticklabels=['PSD', 'MSPE'], ylim=[0.45, 0.75])
 plt.tight_layout()
-
+plt.savefig('psd_mspe_scores_acc.tif', dpi=300)
 
 
 psdcm = np.asarray([psd[i][1] for i in range(len(psd))]).mean(0)
 mspecm = np.asarray([mspe[i][1] for i in range(len(mspe))]).mean(0)
 plot_confusion_matrix(psdcm, ['NREM', 'REM', 'WAKE'], title=None, normalize=True)
+plt.savefig('psd_confusion.tif', dpi=300)
 plot_confusion_matrix(mspecm, ['NREM', 'REM', 'WAKE'], title=None, normalize=True)
+plt.savefig('mspe_confusion.tif', dpi=300)

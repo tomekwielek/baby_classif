@@ -13,6 +13,7 @@ from mne.time_frequency import psd_welch
 import matplotlib.pyplot as plt
 import os
 from mne.stats import permutation_cluster_test
+
 matplotlib.rcParams.update({'font.size': 12,'xtick.labelsize':8, 'ytick.labelsize':8})
 np.random.seed(12)
 
@@ -27,8 +28,8 @@ store = {'week2':[], 'week5':[]}
 store_psd =  {'week2':[], 'week5':[]}
 store_event =  {'week2':[], 'week5':[]}
 
-pick_chann = ['F3', 'F4', 'C3', 'C4', 'O1', 'O2'] # set what channels mspe gets computed
-plot_chann = ['O1', 'O2']
+pick_chann = ['F3', 'F4', 'C3', 'C4', 'O1', 'O2'] # set what channels
+plot_chann = ['F3', 'F4', 'C3', 'C4', 'O1', 'O2']
 m = mne.channels.read_montage(kind='standard_1020')
 
 colors = ['black', 'red']
@@ -40,8 +41,10 @@ def find_drop_20hz(epoch):
         - requiers 'bad subjects' to be defined (done by visual inspection of time-freq plots)
         - drop epochs with 20Hz power higher than 90th percentile
     '''
-    psds, freqs = mne.time_frequency.psd_welch(epoch, fmin=1, fmax=30, n_fft=128, picks=slice(0,6,1))
+    psds, freqs = mne.time_frequency.psd_welch(epoch, fmin=1, fmax=30, n_fft=128, n_overlap=64,
+                                            picks=slice(0,6,1))
     freqs = freqs.astype(int)
+    n_freqs = len(freqs)
     idx_freq = np.where(freqs == 20)
     band = psds[:,:,idx_freq].squeeze()
     band = band.mean((1))
@@ -75,10 +78,12 @@ for data, time, bad in zip([fnames1, fnames2], ['week2', 'week5'], [bad_sbjs_1, 
                 epoch_clean = epoch
 
             del epoch
+
             psds, freqs = mne.time_frequency.psd_welch(epoch_clean, fmin=1, fmax=30, n_fft=128,
                                                     picks=pick_chann, n_overlap=64) # slice(0,6,1)
             psds = 10. * np.log10(psds) #dB
             freqs = freqs.astype(int)
+            n_freqs = len(freqs)
             assert len(epoch_clean) == len(epoch_clean.events) == len(psds)
             store[time].append(epoch_clean)
             store_psd[time].append(psds)
@@ -90,21 +95,20 @@ def my_bootstraper(data, ch_indices, repetions=1000, n=10):
     Bootstraped averaging of n epochs (epochs per sleep stage)
     data[i].shape = n_epochs x n_chs x freqs where i=sbj index
     '''
-    np.random.seed(None) # randomly initialize the RNG from some platform-dependent source
-    store_repet = np.zeros([repetions, len(data), 29]) #29 freq bins
+    np.random.seed(None) # randomly initialize the RNG
+    store_repet = np.zeros([repetions, len(data), len(freqs)])
     for i in range(repetions):
         store = []
         for d_ in data:
             count = d_.shape[0]
             if count == 0:
-                store.append([np.nan] * 29) #29 freq bins
+                store.append([np.nan] * len(freqs)) #N freq bins
             else:
                 sample = np.min([n, count]) # if n<count mean over count
                 epoch_indices = np.random.choice(count, sample)
                 av = d_[:, ch_indices, :] #sample channels
                 av = av[epoch_indices, :, :] #sample epochs
                 store.append(av.mean((0,1)))
-        #set_trace()
         store_repet[i,:] = store
     return store_repet
 
@@ -135,9 +139,9 @@ for ax, stage, title in zip([ax1, ax2, ax3],
         ax.set(xlabel='Frequency [Hz]')
 
     av2 = store['week2'][0]
-    av2  = av2[~np.isnan(av2)].reshape([-1, 29]) #drop nan
+    av2  = av2[~np.isnan(av2)].reshape([-1, n_freqs]) #drop nan
     av5 = store['week5'][0]
-    av5  = av5[~np.isnan(av5)].reshape([-1, 29]) #drop nan
+    av5  = av5[~np.isnan(av5)].reshape([-1, n_freqs]) #drop nan
     count2 = len(av2)
     count5 = len(av5)
     sample = np.random.choice(range(max(count2, count5)), size=min(count2, count5), replace=False)
@@ -158,10 +162,10 @@ for ax, stage, title in zip([ax1, ax2, ax3],
     ax.set_xticks(np.arange(min(freqs), max(freqs)+1, 5))
     #ax.set_xscale('log')
     ax1.set(ylabel='Power Spectral Density [dB]', ylim=(-140, -95))
-    ax1.set_yticks(np.arange(-140, -95 , 10))
+    #ax1.set_yticks(np.arange(-140, -95 , 10))
     ax3.legend(['week2', 'week5'])
 plt.tight_layout()
 plt.suptitle(' '.join(plot_chann))
 plt.tight_layout()
 plt.show()
-plt.savefig('_'.join(plot_chann)+ 'psd.tif', dpi=300)
+#plt.savefig('_'.join(plot_chann)+ 'psd.tif', dpi=300)

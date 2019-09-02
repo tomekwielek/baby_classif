@@ -53,34 +53,6 @@ def read_raw(sheet, setup='mspet1m3'):
         #return preproces(raw), stag # apply pp.
         return raw, stag #no filtering
 
-
-    def compute_psd_segm(raw, window=30):
-        from mne.time_frequency import psd_welch
-        from mne.io import RawArray
-
-        def get_raw_array(data):
-            ch_types  = ['eeg'] * chan_len
-            info = mne.create_info(ch_names=raw.ch_names, sfreq=sfreq, ch_types=ch_types)
-            raw_array = RawArray(data, info=info)
-            return raw_array
-
-        data = raw.get_data()
-        sfreq = raw.info['sfreq']
-        length_dp = len(raw.times)
-        window_dp = int(window*sfreq)
-        no_epochs = int(length_dp // window_dp)
-        chan_len = len(raw.ch_names)
-        store_psd = []
-        for i in range(no_epochs):
-            e_ = data[...,:window_dp]
-            data = np.delete(data, np.s_[:window_dp], axis =1 )
-            ra = get_raw_array(e_)
-            psd, freqs = psd_welch(ra ,fmin=1,fmax=30)
-            #psd = 10 * np.log10(psd) # log is done latter on, in wrap_psd.py
-            store_psd.append(psd)
-        #psd array of shape [freqs, channs, epochs]
-        return freqs, np.asarray(store_psd).transpose(2,1,0)
-
     def compute_pe_segm(raw, embed=3, tau=1, window=30, mspe=False):
         data = raw.get_data()
         sfreq = raw.info['sfreq']
@@ -115,13 +87,6 @@ def read_raw(sheet, setup='mspet1m3'):
     idfs = map_stag_with_raw(fnames, ss, sufx='ref119')
     idfs = {i : v for i, v in idfs.items() if len(v) >= 1} # drop empty
     idfs = {i : v for i, v in idfs.items() if 'P' not in i} # drop Prechtls
-    #write idfs df to excel
-    #from write_data import mywriter
-    #mywriter(idfs, sheet + '.xlsx')
-
-    #select single subject
-    #sbj = '113_2_S'
-    #idfs = {k : v for k,v in idfs.items() if k == sbj}
 
 
     def raw_to_epochs_using_annotations(raw, stag, k):
@@ -169,8 +134,7 @@ def read_raw(sheet, setup='mspet1m3'):
             mysave(var=epochs, typ='epoch', sbj=k[:5])
             pe = compute_pe_segm(raw, embed=embed, tau=tau, mspe=True)
             #mysave(var = [stag, pe], typ='mspet1m3', sbj=k[:5])
-            #freqs, psd = compute_psd_segm(raw, window=30)
-            #mysave(var = [stag, psd, freqs], typ='psd', sbj=k[:5])
+
         elif k in bad:
             print ('Sbj dropped, see red annot. by H.L in excel file')
             continue

@@ -680,6 +680,7 @@ def remove_20hz_artif(pe, psd, stag, names, freqs, bad_sbjs):
         if sbj in bad_sbjs:
             print(sbj)
             #plot_data(pe[idx_sbj], psd[idx_sbj], stag[idx_sbj], names_pe[idx_sbj])
+            #set_trace()
             this_data = psd[idx_sbj][idx_freq,:,:][0]
             idx_time = np.where(this_data[0,0,:] > np.percentile(this_data[0,0,:], 90))[0]
             if sbj in ['236_2'] and 0 in idx_time:
@@ -688,7 +689,6 @@ def remove_20hz_artif(pe, psd, stag, names, freqs, bad_sbjs):
             mask_psd[:,:,idx_time] = False
             psd_cor = psd[idx_sbj][mask_psd].reshape(psd[idx_sbj].shape[:2]+(-1,))
             mask_pe = np.ones(pe[idx_sbj].shape,dtype=bool)
-            #set_trace()
             mask_pe[:,:,idx_time] = False
             pe_cor = pe[idx_sbj][mask_pe].reshape(pe[idx_sbj].shape[:2]+(-1,))
             stag_cor = stag[idx_sbj].drop(idx_time, axis=0)
@@ -756,3 +756,22 @@ def relative_power(data, sf, band, window_sec=1.):
         bp = psd[idx_band].sum()
         rel_psd[chi, :] = psd[idx_band] / bp
     return rel_psd, freqs[idx_band]
+
+
+def find_drop_20hz(epoch):
+    '''
+    Drop epochs with 20Hz artifacts (egi impedance check):
+        - requiers 'bad subjects' to be defined (done by visual inspection of time-freq plots)
+        - drop epochs with 20Hz power higher than 90th percentile
+    '''
+    psds, freqs = mne.time_frequency.psd_welch(epoch, fmin=1, fmax=30, n_fft=128, picks=slice(0,6,1))
+    freqs = freqs.astype(int)
+    idx_freq = np.where(freqs == 20)
+    band = psds[:,:,idx_freq].squeeze()
+    band = band.mean((1))
+    idx_time = np.where(band[:] > np.percentile(band[:], 90))[0]
+    if sbj in ['236_2'] and 0 in idx_time:
+        idx_time = idx_time[1:] #see annot by HL in excel and functional.py; BL shorter
+    mask_psd = np.ones(psds.shape,dtype=bool)
+    mask_psd[idx_time,:,:] = False
+    return(epoch.drop(idx_time))
