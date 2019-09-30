@@ -1,5 +1,8 @@
 '''
-MSPE analysis, statistics, visualisation
+(1) Read Epochs
+(2) Compute MSPE (for statistics and boxplots)
+(3) Save
+NOTE:similar to "2_mspe_psd_from_raw.py" though more recent. Staging from Epochs instead of excel
 '''
 import mne
 import os

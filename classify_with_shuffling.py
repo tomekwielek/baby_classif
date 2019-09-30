@@ -7,7 +7,7 @@ from sklearn.metrics import f1_score, confusion_matrix, accuracy_score, recall_s
 
 from sklearn.model_selection import RandomizedSearchCV
 from config import (myload, paths, report, raw_path)
-from functional import plot_pe, sc_report, plot_confusion_matrix
+from functional import sc_report
 from IPython.core.debugger import set_trace
 from collections import Counter
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, AdaBoostClassifier
@@ -160,7 +160,7 @@ def classify_shuffle(pe, stag, idx_plot, myshow=False, check_mspe=True, null=Fal
 
         perf.append((acc, cmx, recall, precission, f1_perclass, result_imps))
 
-    plot_sinlge_sbj(pred_plot, stag_plot['numeric'], acc_pred_plot)    
+    plot_sinlge_sbj(pred_plot, stag_plot['numeric'], acc_pred_plot)
 
     return perf
 

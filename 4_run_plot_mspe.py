@@ -1,3 +1,11 @@
+'''
+(1) Read MSPE data
+(2) Aggregate epochs using random re-sampling
+(3) Convert to pandas data frame
+(4) save as csv (for R statistics)
+(5) Plot boxplots
+NOTE: if specified drop outliers first
+'''
 import mne
 import os
 import pandas as pd
@@ -200,4 +208,4 @@ ax.legend(handles=legend_elements, loc='lower right')
 ax.set(ylabel= 'MSPE(scale={}) [bit]'.format(scale_idx+1), xlabel='', xticklabels= ['NREM', 'REM', 'WAKE'], ylim=[1.2, 1.7])
 plt.suptitle(' '.join(plot_chann))
 plt.show()
-plt.savefig('_'.join(plot_chann)+ 'mspe_scale{}.tif'.format(scale_idx+1), dpi=300)
+#plt.savefig('_'.join(plot_chann)+ 'mspe_scale{}.tif'.format(scale_idx+1), dpi=300)

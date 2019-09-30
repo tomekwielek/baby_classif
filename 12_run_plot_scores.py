@@ -1,3 +1,7 @@
+'''
+Plot classification scores for MSPE data including cross classification and null distribution
+(accuruacy and F1 per sleep stage, optionally precission, recall)
+'''
 import os
 import numpy as np
 from config import results_path
@@ -137,20 +141,6 @@ prec_cat_cross = pd.concat([prec_52, prec_25])
 prec_cat_cross = pd.melt(prec_cat_cross, id_vars= 'time')
 rec_cat_cross = pd.concat([rec_52, rec_25])
 rec_cat_cross = pd.melt(rec_cat_cross, id_vars= 'time')
-
-
-
-
-
-'''
-#get difference between within and cross
-f1_2_diff = f1_2[['NREM', 'REM', 'WAKE']] - f1_52[['NREM','REM', 'WAKE']]
-f1_2_diff['time'] = f1_2['time']
-f1_5_diff = f1_5[['NREM', 'REM', 'WAKE']] - f1_25[['NREM','REM', 'WAKE']]
-f1_5_diff['time'] = f1_5['time']
-f1_diff_cat = pd.concat([f1_2_diff, f1_5_diff])
-f1_diff_cat_melt =  pd.melt(f1_diff_cat, id_vars= 'time')
-'''
 
 
 #PLOT WITHIN
@@ -294,8 +284,6 @@ plot_mygrid(acc_52, acc_25, null_acc_52, null_acc_25, f1_cross_cat_melt, prec_ca
             null_prec_52, null_prec_52, null_rec_25, null_rec_25, myxticklab=['week5->week2', 'week2->week5'])
 '''
 ###########################################################################################
-
-
 
 fig = plt.figure(figsize=(15, 4))
 outer = gridspec.GridSpec(2, 4, wspace=0.1, hspace=0.8)

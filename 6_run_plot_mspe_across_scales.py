@@ -1,5 +1,6 @@
 '''
-Similar to plot_mspe, but instead of single scale loop over, append, create long df and plot.
+Plot MSPE across 5 scales, 3 sleep stages (NREM, REM , wake) and 2 sessions (week2, week5)
+Similar to 4_run_plot_mspe, but instead of single scale loop over, append, create long df and plot.
 '''
 import mne
 import os

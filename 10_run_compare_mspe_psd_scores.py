@@ -1,3 +1,6 @@
+'''
+Load and plot classification scores for PSD and MSPE (confusion matrix and box plots)
+'''
 import os
 import numpy as np
 from config import results_path

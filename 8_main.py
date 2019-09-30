@@ -1,15 +1,22 @@
+'''
+Run classification using custom function classify_shuffle. Config params:
+- mspe or psd data
+- mspe scales (e.g 1-5)
+- week2 or week5 session
+- shuffling based null distribution or 'true' classification
+- random search for hyperparameters or default classifier
+'''
 import os
 import numpy as np
 from config import myload, base_path, paths
-from functional import (select_class_to_classif, cat_pe_stag, load_single_append,
-                        count_stag, vis_clf_probas, write_pickle, read_pickle, plot_confusion_matrix,\
-                        plot_acc_depending_scale, remove_20hz_artif, get_unique_name_list)
+from functional import (select_class_to_classif, load_single_append,count_stag, write_pickle, \
+                        read_pickle, plot_confusion_matrix, remove_20hz_artif, get_unique_name_list)
 from matplotlib import pyplot as plt
 from mne import io
 import pandas as pd
 import pickle
 import seaborn as sns
-from classify_with_shuffling_v2 import classify_shuffle
+from classify_with_shuffling import classify_shuffle
 from collections import defaultdict
 from IPython.core.debugger import set_trace
 from config import bad_sbjs_1, bad_sbjs_2
@@ -19,11 +26,11 @@ fnames =  os.listdir(path)
 fnames1 = [f for f in fnames if f.endswith('1')]
 fnames2 = [f for f in fnames if f.endswith('2')] #filter folders
 sel_idxs = [1,2,3]
-time = 5 # if 2 week2, elif 5 week5, elif 'cat' concatenate
+time = 'cat' # if 2 week2, elif 5 week5, elif 'cat' concatenate
 n_folds = 2
 
 #setup = 'psd'
-setup = 'mspet1m3'
+setup = 'psd'
 #iterate to compare statistically psd vs mspe based
 #store_perfs = {'s1':[], 's2': [], 's3': [], 's4': []}
 #store_perfs = {'mspet1m3' : [], 'psd' : []}
@@ -59,14 +66,6 @@ mspe2, stag2, _ = select_class_to_classif(mspe2, stag2, sel_idxs=sel_idxs)
 psd1, stag1, _ = select_class_to_classif(psd1, stag1, sel_idxs=sel_idxs)
 psd2, stag2, _ = select_class_to_classif(psd2, stag2, sel_idxs=sel_idxs)
 
-
-
-rel_psd1 = [psd1[i] / np.abs(np.sum(psd1[i], 0)) for i in range(len(psd1))]
-rel_psd1 = [ np.log10(rel_psd1[i]) for i in range(len(psd1)) ]
-rel_psd2 = [psd2[i] / np.abs(np.sum(psd2[i], 0)) for i in range(len(psd2))]
-rel_psd2 = [ np.log10(rel_psd2[i]) for i in range(len(psd2)) ]
-psd1 = rel_psd1
-psd2 = rel_psd2
 psd1 = [ psd1[i].reshape(-1, psd1[i].shape[-1]) for i in range(len(psd1)) ] # reshape
 psd2 = [ psd2[i].reshape(-1, psd2[i].shape[-1]) for i in range(len(psd2)) ] #reshape
 
@@ -97,50 +96,24 @@ elif setup == 'psd':
 idx_plot = 1
 #assert names1[idx_plot].split('_')[0] == names2[idx_plot].split('_')[0]
 
-# Get all metrics
+# Get all metrices
 perf  = classify_shuffle(data_pe, data_stag, idx_plot, myshow=True, check_mspe=True, null=False,
                             n_folds=n_folds, search=False)
 #print accuracy
 print(np.asarray([perf[i][0] for i in range(len(perf))]).mean())
 
-#print importances
-#imp = dict()
-#for s in [1,2,3]:
-#    imp[s] = np.asarray([perf[i][-1][s] for i in range(len(perf))]).mean(0)
 
+# Save scores
+write_pickle(perf, 'psd_cat_searched_scores.txt')
 
-#write_pickle(perf, 'psd_cat_searched_scores.txt')
-
-#store_perfs.extend([perf])
-
-#write_pickle(perf, 'mspe5_acc_prec_rec2.txt')
-
-#Aggregate folds
-#accav = np.asarray([perf[i][0] for i in range(n_folds)]).mean(0)
-#accav = np.asarray([perf[i][0] for i in range(len(perf))]).mean(0)
-#print accav
-#cmav = np.asarray([perf[i][1] for i in range(len(perf))]).mean(0)
-#recall =  np.asarray([perf[i][2] for i in range(len(perf))]).mean(0)
-#precission =  np.asarray([perf[i][3] for i in range(len(perf))]).mean(0)
-#f1perclass =  np.asarray([perf[i][4] for i in range(len(perf))]).mean(0)
-#cm_title = 'Confusion matrix'
-#plot_confusion_matrix(cmav, ['NREM', 'REM', 'WAKE'], title=cm_title, normalize=True)
-#store_perfs[setup].extend([perf])
-
-
-'''
-#Run shuffling
+# Run classification on shuffled data (chance level)
 nulliter  = 100
 null_perfs = []
 
 for idx in range(nulliter):
-    perf_n = classify_shuffle(data_pe, data_stag, idx_plot, myshow=False, check_mspe=True, \
-                                null=True, n_folds=n_folds, search=False)
+    perf_n = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, myshow=False, \
+                        check_mspe=True, null=True, n_folds=n_folds, five2two=five2two, search=False)
     print(idx)
     null_perfs.append(perf_n)
 
-write_pickle(null_perfs, 'null_week5.txt')
-
-d = read_pickle('psd_cat_null_week5.txt')
-dd = np.asarray([np.asarray([d[i][j][2] for j in range(len(d[0]))]) for i in range(len(d))])
-'''
+# Save chance scores

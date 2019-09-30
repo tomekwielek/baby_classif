@@ -1,3 +1,6 @@
+'''
+Get high density epochs with staging as annotations (events). Used only for hd_topoplots
+'''
 import mne
 import os
 import numpy as np

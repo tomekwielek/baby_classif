@@ -1,9 +1,16 @@
+'''
+Run CROSS classification using custom function classify_shuffle_crosstime. Config params:
+- mspe or psd data
+- mspe scales (e.g 1-5)
+- week2 or week5 session
+- shuffling based null distribution or 'true' classification
+- random search for hyperparameters or default classifier
+'''
 import os
 import numpy as np
 from config import myload, base_path, paths
-from functional import (select_class_to_classif, cat_pe_stag, load_single_append,
-                        count_stag, vis_clf_probas, write_pickle, read_pickle, plot_confusion_matrix,\
-                        plot_acc_depending_scale, remove_20hz_artif, align_t1_t2_data)
+from functional import (select_class_to_classif, load_single_append,write_pickle, read_pickle, plot_confusion_matrix,\
+                        remove_20hz_artif, align_t1_t2_data)
 from matplotlib import pyplot as plt
 from read_raw import *
 from mne import io
@@ -44,12 +51,6 @@ psd2, stag2, _ = select_class_to_classif(psd2, stag2, sel_idxs=sel_idxs)
 
 mspe1, mspe2, stag1, stag2 = align_t1_t2_data(mspe1, mspe2, stag1, stag2) #get matching subject only
 
-rel_psd1 = [psd1[i] / np.abs(np.sum(psd1[i], 0)) for i in range(len(psd1))]
-rel_psd1 = [ np.log10(rel_psd1[i]) for i in range(len(psd1)) ]
-rel_psd2 = [psd2[i] / np.abs(np.sum(psd2[i], 0)) for i in range(len(psd2))]
-rel_psd2 = [ np.log10(rel_psd2[i]) for i in range(len(psd2)) ]
-psd1 = rel_psd1
-psd2 = rel_psd2
 psd1 = [ psd1[i].reshape(-1, psd1[i].shape[-1]) for i in range(len(psd1)) ] # reshape
 psd2 = [ psd2[i].reshape(-1, psd2[i].shape[-1]) for i in range(len(psd2)) ] #reshape
 
@@ -68,6 +69,7 @@ perf = classify_shuffle_crosstime(mspe1, mspe2, stag1, stag2, myshow=False, \
 
 # Save scores
 write_pickle(perf, 'mspe52_cat_searched_scores.txt')
+
 
 # Run classification on shuffled data (chance level)
 nulliter  = 100

@@ -1,3 +1,6 @@
+'''
+Test statistically whether duration of sleep stages differ across sessions
+'''
 import mne
 import os
 import pandas as pd
@@ -96,7 +99,6 @@ df = df.round(2)
 df[['time', 'NREM_ratio']].groupby('time').mean()
 df[['time', 'REM_ratio']].groupby('time').mean()
 df[['time', 'WAKE_ratio']].groupby('time').mean()
-
 
 
 def test_changes_between_sessions(mydf, stage):

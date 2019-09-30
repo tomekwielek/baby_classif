@@ -1,5 +1,8 @@
 '''
-PSD analysis, statistics, visualisation
+(1) Read Epochs
+(2) Compute welch PSD
+(3) Aggregate epochs using random re-sampling
+(4) PLot PSD with cluster perm. stat
 '''
 import mne
 import os
@@ -28,8 +31,8 @@ store = {'week2':[], 'week5':[]}
 store_psd =  {'week2':[], 'week5':[]}
 store_event =  {'week2':[], 'week5':[]}
 
-pick_chann = ['F3', 'F4', 'C3', 'C4', 'O1', 'O2'] # set what channels
-plot_chann = ['F3', 'F4', 'C3', 'C4', 'O1', 'O2']
+pick_chann = ['C3', 'C4'] # set what channels
+plot_chann = ['C3', 'C4']
 m = mne.channels.read_montage(kind='standard_1020')
 
 colors = ['black', 'red']
@@ -54,7 +57,6 @@ def find_drop_20hz(epoch):
     mask_psd = np.ones(psds.shape,dtype=bool)
     mask_psd[idx_time,:,:] = False
     return(epoch.drop(idx_time))
-
 
 # Plot layout 6 channels
 if plot_lay:
