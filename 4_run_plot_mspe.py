@@ -81,7 +81,7 @@ def remove_outliers_from_df(data):
     for (column, data) in df.iteritems():
         q1 = data.dropna().quantile(.25)
         q3 = data.dropna().quantile(.75)
-        iqr = q3 - q1
+        i   qr = q3 - q1
         lower_bound = q1 -(1.5 * iqr)
         upper_bound = q3 +(1.5 * iqr)
         mask = np.zeros(len(data), dtype=bool)

@@ -6,5 +6,6 @@
 *.txt
 *.html
 *.ipynb
+*.tiff
 .pydevproject
 __pycache__/

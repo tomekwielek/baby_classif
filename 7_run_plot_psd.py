@@ -9,13 +9,14 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib
-from config import myload
+from config import myload, mysave
 from IPython.core.debugger import set_trace
 from config import paths,  bad_sbjs_1, bad_sbjs_2
 from mne.time_frequency import psd_welch
 import matplotlib.pyplot as plt
 import os
 from mne.stats import permutation_cluster_test
+from functional import write_pickle
 
 matplotlib.rcParams.update({'font.size': 12,'xtick.labelsize':8, 'ytick.labelsize':8})
 np.random.seed(12)
@@ -30,9 +31,10 @@ events_id_map = {'N':1, 'R':2, 'W':3}
 store = {'week2':[], 'week5':[]}
 store_psd =  {'week2':[], 'week5':[]}
 store_event =  {'week2':[], 'week5':[]}
+store_name = {'week2':[], 'week5':[]}
 
-pick_chann = ['C3', 'C4'] # set what channels
-plot_chann = ['C3', 'C4']
+pick_chann = ['O1', 'O2'] # set what channels
+plot_chann = ['O1', 'O2']
 m = mne.channels.read_montage(kind='standard_1020')
 
 colors = ['black', 'red']
@@ -90,6 +92,7 @@ for data, time, bad in zip([fnames1, fnames2], ['week2', 'week5'], [bad_sbjs_1, 
             store[time].append(epoch_clean)
             store_psd[time].append(psds)
             store_event[time].append(epoch_clean.events[:,-1])
+            store_name[time].append(sbj)
 
 
 def my_bootstraper(data, ch_indices, repetions=1000, n=10):
@@ -118,6 +121,9 @@ def my_bootstraper(data, ch_indices, repetions=1000, n=10):
 ch_indices  = mne.pick_channels(epoch_clean.ch_names, include=plot_chann)
 colors = ['black', 'red']
 fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, sharex=True, figsize=(6,3))
+store_stages = {'NREM' : {'week2': [], 'week5': []}, 
+                'REM': {'week2': [], 'week5': []}, 
+                'WAKE': {'week2': [], 'week5': []}}
 
 for ax, stage, title in zip([ax1, ax2, ax3],
                    events_id, ['NREM', 'REM', 'WAKE']):
@@ -125,20 +131,29 @@ for ax, stage, title in zip([ax1, ax2, ax3],
     event_week2 = store_event['week2']
     psd_week5 = store_psd['week5']
     event_week5 = store_event['week5']
+    name_week2 = store_name['week2']
+    name_week5 = store_name['week5']
+
 
     finder2 = [ np.where(event_week2[i] == events_id_map[stage])[0] for i in range(len(event_week2)) ]
     psd_week2 = [ psd_week2[i][finder2[i], :, :] for i in range(len(event_week2)) ]
+    sbj_mask2 = [len(f) > 0 for f in finder2]    
+    name_week2 = [ n for n, m in zip(name_week2, sbj_mask2) if m]
     finder5 = [ np.where(event_week5[i] == events_id_map[stage])[0] for i in range(len(event_week5)) ]
     psd_week5 = [ psd_week5[i][finder5[i], :, :] for i in range(len(event_week5)) ]
-
+    sbj_mask5 = [len(f) > 0 for f in finder5]    
+    name_week5 = [ n for n, m in zip(name_week5, sbj_mask5) if m]
+  
     store =  {'week2':[], 'week5':[]}
-    for time, color, psd in zip(['week2', 'week5'], colors, [psd_week2, psd_week5]):
+    for time, color, psd, name in zip(['week2', 'week5'], colors, [psd_week2, psd_week5], [name_week2, name_week5]):
         boots = my_bootstraper(psd, ch_indices=ch_indices, repetions=4000, n=10)
-        boots = np.nanmean(boots, 0) #mean over subjects bootstraped averages of epochs
+        boots = np.nanmean(boots, 0) #mean over bootstrap samples
         store[time].append(boots)
         av_psd = np.nanmean(boots, 0) #mean subjects
         ax.plot(freqs, av_psd, color=color, linewidth=3)
         ax.set(xlabel='Frequency [Hz]')
+
+        store_stages[title][time] = (boots, name)
 
     av2 = store['week2'][0]
     av2  = av2[~np.isnan(av2)].reshape([-1, n_freqs]) #drop nan
@@ -169,5 +184,8 @@ for ax, stage, title in zip([ax1, ax2, ax3],
 plt.tight_layout()
 plt.suptitle(' '.join(plot_chann))
 plt.tight_layout()
-plt.show()
+#plt.show()
 #plt.savefig('_'.join(plot_chann)+ 'psd.tif', dpi=300)
+
+#Save nested dict (stages, time)
+write_pickle(store_stages, 'psd_for_stages_times_O1O2.txt')
