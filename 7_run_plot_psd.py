@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import os
 from mne.stats import permutation_cluster_test
 from functional import write_pickle
+from scipy.stats import sem
 
 matplotlib.rcParams.update({'font.size': 12,'xtick.labelsize':8, 'ytick.labelsize':8})
 np.random.seed(12)
@@ -33,8 +34,8 @@ store_psd =  {'week2':[], 'week5':[]}
 store_event =  {'week2':[], 'week5':[]}
 store_name = {'week2':[], 'week5':[]}
 
-pick_chann = ['O1', 'O2'] # set what channels
-plot_chann = ['O1', 'O2']
+pick_chann = ['F3', 'F4'] # set what channels
+plot_chann = ['F3', 'F4']
 m = mne.channels.read_montage(kind='standard_1020')
 
 colors = ['black', 'red']
@@ -49,7 +50,6 @@ def find_drop_20hz(epoch):
     psds, freqs = mne.time_frequency.psd_welch(epoch, fmin=1, fmax=30, n_fft=128, n_overlap=64,
                                             picks=slice(0,6,1))
     freqs = freqs.astype(int)
-    n_freqs = len(freqs)
     idx_freq = np.where(freqs == 20)
     band = psds[:,:,idx_freq].squeeze()
     band = band.mean((1))
@@ -150,7 +150,11 @@ for ax, stage, title in zip([ax1, ax2, ax3],
         boots = np.nanmean(boots, 0) #mean over bootstrap samples
         store[time].append(boots)
         av_psd = np.nanmean(boots, 0) #mean subjects
+        sem_psd  = sem(boots, axis=0, nan_policy='omit')
         ax.plot(freqs, av_psd, color=color, linewidth=3)
+        ax.fill_between(range(1, len(av_psd)+1), av_psd - sem_psd, av_psd + sem_psd,
+                        color='black', alpha=0.2, edgecolor='none')
+        #set_trace()
         ax.set(xlabel='Frequency [Hz]')
 
         store_stages[title][time] = (boots, name)
@@ -184,8 +188,8 @@ for ax, stage, title in zip([ax1, ax2, ax3],
 plt.tight_layout()
 plt.suptitle(' '.join(plot_chann))
 plt.tight_layout()
-#plt.show()
+plt.show()
 #plt.savefig('_'.join(plot_chann)+ 'psd.tif', dpi=300)
 
 #Save nested dict (stages, time)
-write_pickle(store_stages, 'psd_for_stages_times_O1O2.txt')
+#write_pickle(store_stages, 'psd_for_stages_times_O1O2.txt')
