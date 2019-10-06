@@ -34,7 +34,7 @@ store_psd =  {'week2':[], 'week5':[]}
 store_event =  {'week2':[], 'week5':[]}
 store_name = {'week2':[], 'week5':[]}
 
-pick_chann = ['F3', 'F4'] # set what channels
+pick_chann = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4'] # set what channels to compute psd for 
 plot_chann = ['F3', 'F4']
 m = mne.channels.read_montage(kind='standard_1020')
 
@@ -103,18 +103,23 @@ def my_bootstraper(data, ch_indices, repetions=1000, n=10):
     np.random.seed(None) # randomly initialize the RNG
     store_repet = np.zeros([repetions, len(data), len(freqs)])
     for i in range(repetions):
-        store = []
-        for d_ in data:
+        #store = []
+        for j, d_ in enumerate(data): # data is a list of psds (over sbjs)
             count = d_.shape[0]
+            #set_trace()
+
             if count == 0:
-                store.append([np.nan] * len(freqs)) #N freq bins
+                #store.append([np.nan] * len(freqs)) #N freq bins
+                store_repet[i,j,:] = [np.nan] * len(freqs)
             else:
                 sample = np.min([n, count]) # if n<count mean over count
                 epoch_indices = np.random.choice(count, sample)
                 av = d_[:, ch_indices, :] #sample channels
                 av = av[epoch_indices, :, :] #sample epochs
-                store.append(av.mean((0,1)))
-        store_repet[i,:] = store
+                #store.append(av.mean((0,1)))
+                #set_trace()
+                store_repet[i,j,:] = av.mean((0,1))
+    #set_trace()
     return store_repet
 
 # PLOT psd WITH stat
@@ -146,14 +151,15 @@ for ax, stage, title in zip([ax1, ax2, ax3],
   
     store =  {'week2':[], 'week5':[]}
     for time, color, psd, name in zip(['week2', 'week5'], colors, [psd_week2, psd_week5], [name_week2, name_week5]):
-        boots = my_bootstraper(psd, ch_indices=ch_indices, repetions=4000, n=10)
+        boots = my_bootstraper(psd, ch_indices=ch_indices, repetions=5000, n=10)
         boots = np.nanmean(boots, 0) #mean over bootstrap samples
         store[time].append(boots)
         av_psd = np.nanmean(boots, 0) #mean subjects
+        #set_trace()
         sem_psd  = sem(boots, axis=0, nan_policy='omit')
         ax.plot(freqs, av_psd, color=color, linewidth=3)
         ax.fill_between(range(1, len(av_psd)+1), av_psd - sem_psd, av_psd + sem_psd,
-                        color='black', alpha=0.2, edgecolor='none')
+                       color='black', alpha=0.2, edgecolor='none')
         #set_trace()
         ax.set(xlabel='Frequency [Hz]')
 
@@ -168,7 +174,7 @@ for ax, stage, title in zip([ax1, ax2, ax3],
     sample = np.random.choice(range(max(count2, count5)), size=min(count2, count5), replace=False)
     av5 = av5[sample, :]
     X = av2 - av5
-    t, clusters, pv, _ =  mne.stats.permutation_cluster_1samp_test(X, n_permutations=100000)
+    t, clusters, pv, _ =  mne.stats.permutation_cluster_1samp_test(X, n_permutations=1000) # 100000
     print(pv)
     for i_c, c in enumerate(clusters):
         c = c[0]
@@ -181,7 +187,8 @@ for ax, stage, title in zip([ax1, ax2, ax3],
                         alpha=0.2)
 
     ax.set_xticks(np.arange(min(freqs), max(freqs)+1, 5))
-    #ax.set_xscale('log')
+    #ax.set_xscale('symlog')
+    #ax.set_yscale('symlog')
     ax1.set(ylabel='Power Spectral Density [dB]', ylim=(-140, -95))
     #ax1.set_yticks(np.arange(-140, -95 , 10))
     ax3.legend(['week2', 'week5'])
