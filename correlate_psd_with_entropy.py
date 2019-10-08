@@ -64,7 +64,7 @@ wake = dfm[dfm['stag'] == 'WAKE']
 sns.set_style('ticks')
 matplotlib.rcParams.update({'font.size': 17,'xtick.labelsize':14, 'ytick.labelsize':14, 'axes.labelsize': 'medium', 'figure.figsize' : (15, 15)})
 
-
+'''
 for d, c, n in zip([nrem, rem, wake], ['royalblue', 'indianred', 'tan'], ['nrem', 'rem', 'wake']):     
         sns.jointplot('psd', 'value', data=d, kind='reg', color=c, stat_func=spearmanr)
         plt.xlabel('Sigma power [dB]')
@@ -74,9 +74,9 @@ for d, c, n in zip([nrem, rem, wake], ['royalblue', 'indianred', 'tan'], ['nrem'
         dpi = 300
         plt.savefig('corr_{}_mspescale{}.tiff'.format(n, mspescale), dpi=dpi)
         #break
-
-##########################################################
 '''
+##########################################################
+
 # Correlate relative values (eg. week2 - week5). Since small number of sbjs having NREM during both sessions results are not veery conclusive
 
 # Drop not needed cols 
@@ -110,4 +110,15 @@ sns.lmplot(data=diffm, x='psd', y='mspe', hue='stag')
 
 sns.jointplot(data=diffm[diffm['stag']=='NREM'], x='psd', y='mspe', kind='reg')
 plt.show()
+
+###################
+'''
+# Find matchings in both sessions
+w2 = psd['NREM']['week2'][1]
+w2 = [ w2[i].split('_')[0] for i in range(len(w2)) ]
+w5 = psd['NREM']['week5'][1]
+w5 = [ w5[i].split('_')[0] for i in range(len(w5)) ]
+
+len(set(w2) & set(w5))
+
 '''

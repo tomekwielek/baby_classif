@@ -159,7 +159,7 @@ for ax, stage, title in zip([ax1, ax2, ax3],
         sem_psd  = sem(boots, axis=0, nan_policy='omit')
         ax.plot(freqs, av_psd, color=color, linewidth=3)
         ax.fill_between(range(1, len(av_psd)+1), av_psd - sem_psd, av_psd + sem_psd,
-                       color='black', alpha=0.2, edgecolor='none')
+                       color=color, alpha=0.1, edgecolor='none')
         #set_trace()
         ax.set(xlabel='Frequency [Hz]')
 
@@ -186,9 +186,13 @@ for ax, stage, title in zip([ax1, ax2, ax3],
             ax.axvspan(freqs[c.start], freqs[c.stop - 1], color=(0.3, 0.3, 0.3),
                         alpha=0.2)
 
-    ax.set_xticks(np.arange(min(freqs), max(freqs)+1, 5))
-    #ax.set_xscale('symlog')
-    #ax.set_yscale('symlog')
+   
+    ax1.set_xscale('symlog')
+     #ax.set_xticks(np.arange(min(freqs), max(freqs)+1, 5))
+    ax1.set_xticks([1, 4, 12, 29])
+    ax1.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+
+    ax1.set_yscale('symlog')
     ax1.set(ylabel='Power Spectral Density [dB]', ylim=(-140, -95))
     #ax1.set_yticks(np.arange(-140, -95 , 10))
     ax3.legend(['week2', 'week5'])

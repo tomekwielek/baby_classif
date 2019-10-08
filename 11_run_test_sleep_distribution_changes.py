@@ -109,6 +109,7 @@ def test_changes_between_sessions(mydf, stage):
     d2 = d2.replace(0, np.nan).dropna()
     d5 = d5.replace(0, np.nan).dropna()
     matching = pd.merge(d2, d5, on='name') #includy sbjs where sleep stage is present in both sessions
+    set_trace()
     col1 = '{}_x'.format(stage)
     col2 = '{}_y'.format(stage)
     res = stats.wilcoxon(matching[col1], matching[col2], zero_method='wilcox') #paired testing
@@ -121,3 +122,6 @@ print('REM: stat{}, medians w2 vs w5{}'.format(*test_changes_between_sessions(df
 print('NREM {}'.format(test_changes_between_sessions(df, stage='NREM')))
 print('WAKE {}'.format(test_changes_between_sessions(df, stage='WAKE')))
 print('SLEEP {}'.format(test_changes_between_sessions(df, stage='SLEEP')))
+
+
+
