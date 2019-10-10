@@ -8,7 +8,9 @@ from scipy import stats
 import matplotlib
 
 psd = read_pickle('psd_for_stages_times_F3F4.txt')
-freqs_bins = [10, 11, 12,13,14]
+#freqs_bins = [10, 11, 12,13,14]
+#freqs_bins = range(1,9)
+freqs_bins = [14, 15, 16,17, 18, 22, 23, 24]
 stages = ['NREM', 'REM', 'WAKE']
 times = ['week2', 'week5']
 #items = ['psd', 'name']
@@ -64,19 +66,20 @@ wake = dfm[dfm['stag'] == 'WAKE']
 sns.set_style('ticks')
 matplotlib.rcParams.update({'font.size': 17,'xtick.labelsize':14, 'ytick.labelsize':14, 'axes.labelsize': 'medium', 'figure.figsize' : (15, 15)})
 
-'''
+
 for d, c, n in zip([nrem, rem, wake], ['royalblue', 'indianred', 'tan'], ['nrem', 'rem', 'wake']):     
         sns.jointplot('psd', 'value', data=d, kind='reg', color=c, stat_func=spearmanr)
-        plt.xlabel('Sigma power [dB]')
+        
         plt.ylabel('Entropy (scale={}) [bit]'.format(mspescale))
+        plt.xlabel('Beta power [dB]')
         #plt.ylim((1.2, 1.5))
-        #wplt.show()
+        plt.show()
         dpi = 300
-        plt.savefig('corr_{}_mspescale{}.tiff'.format(n, mspescale), dpi=dpi)
+        plt.savefig('corr_{}_mspescale{}_beta.tiff'.format(n, mspescale), dpi=dpi)
         #break
-'''
-##########################################################
 
+##########################################################
+'''
 # Correlate relative values (eg. week2 - week5). Since small number of sbjs having NREM during both sessions results are not veery conclusive
 
 # Drop not needed cols 
@@ -110,7 +113,7 @@ sns.lmplot(data=diffm, x='psd', y='mspe', hue='stag')
 
 sns.jointplot(data=diffm[diffm['stag']=='NREM'], x='psd', y='mspe', kind='reg')
 plt.show()
-
+'''
 ###################
 '''
 # Find matchings in both sessions

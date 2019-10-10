@@ -34,7 +34,7 @@ store_psd =  {'week2':[], 'week5':[]}
 store_event =  {'week2':[], 'week5':[]}
 store_name = {'week2':[], 'week5':[]}
 
-pick_chann = ['F3', 'C3', 'O1', 'O2', 'C4', 'F4'] # set what channels to compute psd for 
+pick_chann = ['F3', 'F4'] # set what channels to compute psd for 
 plot_chann = ['F3', 'F4']
 m = mne.channels.read_montage(kind='standard_1020')
 
@@ -74,6 +74,7 @@ for data, time, bad in zip([fnames1, fnames2], ['week2', 'week5'], [bad_sbjs_1, 
         else:
             epoch = myload(typ='epoch', sbj=sbj)
             epoch = epoch[events_id]
+            #set_trace()
             epoch.set_montage(m)
             epoch.pick_channels(pick_chann)
             if sbj in bad: #bad subject are defined by visual inspection of the tfr plots
@@ -100,7 +101,7 @@ def my_bootstraper(data, ch_indices, repetions=1000, n=10):
     Bootstraped averaging of n epochs (epochs per sleep stage)
     data[i].shape = n_epochs x n_chs x freqs where i=sbj index
     '''
-    np.random.seed(None) # randomly initialize the RNG
+    np.random.seed(123) #  initialize the RNG
     store_repet = np.zeros([repetions, len(data), len(freqs)])
     for i in range(repetions):
         #store = []
@@ -151,16 +152,17 @@ for ax, stage, title in zip([ax1, ax2, ax3],
   
     store =  {'week2':[], 'week5':[]}
     for time, color, psd, name in zip(['week2', 'week5'], colors, [psd_week2, psd_week5], [name_week2, name_week5]):
-        boots = my_bootstraper(psd, ch_indices=ch_indices, repetions=5000, n=10)
+        boots = my_bootstraper(psd, ch_indices=ch_indices, repetions=10000, n=10)
         boots = np.nanmean(boots, 0) #mean over bootstrap samples
         store[time].append(boots)
         av_psd = np.nanmean(boots, 0) #mean subjects
         #set_trace()
         sem_psd  = sem(boots, axis=0, nan_policy='omit')
-        ax.plot(freqs, av_psd, color=color, linewidth=3)
-        ax.fill_between(range(1, len(av_psd)+1), av_psd - sem_psd, av_psd + sem_psd,
-                       color=color, alpha=0.1, edgecolor='none')
-        #set_trace()
+        ax.plot(freqs, av_psd, color=color, linewidth=2)
+        ax.plot(freqs, av_psd+sem_psd, color=color, alpha=0.4, linestyle = '--')
+        ax.plot(freqs, av_psd-sem_psd, color=color, alpha=0.4, linestyle = '--')
+        #ax.fill_between(range(1, len(av_psd)+1), av_psd - sem_psd, av_psd + sem_psd,
+        #               facecolor=color, alpha=0.1, edgecolor='none')
         ax.set(xlabel='Frequency [Hz]')
 
         store_stages[title][time] = (boots, name)
@@ -174,33 +176,35 @@ for ax, stage, title in zip([ax1, ax2, ax3],
     sample = np.random.choice(range(max(count2, count5)), size=min(count2, count5), replace=False)
     av5 = av5[sample, :]
     X = av2 - av5
-    t, clusters, pv, _ =  mne.stats.permutation_cluster_1samp_test(X, n_permutations=1000) # 100000
+    t, clusters, pv, _ =  mne.stats.permutation_cluster_1samp_test(X, n_permutations=5000) # 100000
     print(pv)
     for i_c, c in enumerate(clusters):
         c = c[0]
         if pv[i_c] <= 0.05:
             h = ax.axvspan(freqs[c.start], freqs[c.stop - 1],
-                            color='r', alpha=0.2)
+                            facecolor='r', alpha=0.3)
             ax1.legend((h, ), ('cluster p-value < 0.05', ),  prop={'size': 6})
-        else:
-            ax.axvspan(freqs[c.start], freqs[c.stop - 1], color=(0.3, 0.3, 0.3),
-                        alpha=0.2)
-
+        #else:
+        #    ax.axvspan(freqs[c.start], freqs[c.stop - 1], facecolor=(0.3, 0.3, 0.3),
+        #                alpha=0.2)
    
     ax1.set_xscale('symlog')
-     #ax.set_xticks(np.arange(min(freqs), max(freqs)+1, 5))
+    #ax.set_xticks(np.arange(min(freqs), max(freqs)+1, 5))
     ax1.set_xticks([1, 4, 12, 29])
-    ax1.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
 
     ax1.set_yscale('symlog')
     ax1.set(ylabel='Power Spectral Density [dB]', ylim=(-140, -95))
-    #ax1.set_yticks(np.arange(-140, -95 , 10))
+    ax1.set_yticks([-140, -120, -100])
+    ax1.get_yaxis().set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+    ax1.get_xaxis().set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
     ax3.legend(['week2', 'week5'])
+    #break
+   
 plt.tight_layout()
-plt.suptitle(' '.join(plot_chann))
+#plt.suptitle(' '.join(plot_chann))
 plt.tight_layout()
 plt.show()
-#plt.savefig('_'.join(plot_chann)+ 'psd.tif', dpi=300)
+plt.savefig('_'.join(plot_chann)+ 'psd.tif', dpi=300)
 
 #Save nested dict (stages, time)
 #write_pickle(store_stages, 'psd_for_stages_times_O1O2.txt')

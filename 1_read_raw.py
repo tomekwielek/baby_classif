@@ -82,7 +82,7 @@ def read_raw(sheet):
         raw.info['meas_date'] = None
         tmax = 30. - 1. / raw.info['sfreq']  # tmax in included
         epochs = mne.Epochs(raw=raw, events=events,
-                          event_id=event_id_this, tmin=0., tmax=tmax, baseline=None)
+                          event_id=event_id_this, tmin=0., tmax=tmax, baseline=None)                 
         return epochs
 
     for k, v in sorted(idfs.items()):
