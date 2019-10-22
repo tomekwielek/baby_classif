@@ -83,10 +83,6 @@ f1, f1_indiv = classify_shuffle(data_pe, data_stag, myshow=False, check_mspe=Tru
                             n_folds=n_folds, search=True)
 #store_acc[setup].extend([acc])
 
-
-
-
-=======
 #store_perfs = {'s1':[], 's2': [], 's3': [], 's4': []}
 #store_perfs = {'mspet1m3' : [], 'psd' : []}
 #store_perfs = {'mspet1m3' : []}
