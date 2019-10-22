@@ -28,10 +28,65 @@ fnames2 = [f for f in fnames if f.endswith('2')] #filter folders
 sel_idxs = [1,2,3]
 time = 'cat' # if 2 week2, elif 5 week5, elif 'cat' concatenate
 n_folds = 2
+setup = 'mspet1m3'
+store_acc = {'mspet1m3' : [], 'psd':[]}
 
-#setup = 'psd'
-setup = 'psd'
-#iterate to compare statistically psd vs mspe based
+#for setup in ['mspet1m3', 'psd']:
+#    for i in range(20):
+if setup == 'mspet1m3':
+    # SIMPLE GENERALIZATION BASED ON MSPE
+    mspe1, stag1, names1, _ = load_single_append(path, fnames1, typ=setup)
+    mspe2, stag2, names2, _ = load_single_append(path, fnames2, typ=setup)
+    mspe1, stag1 = select_class_to_classif(mspe1, stag1, sel_idxs=sel_idxs)
+    mspe2, stag2 = select_class_to_classif(mspe2, stag2, sel_idxs=sel_idxs)
+
+    mspe1_ = [ mspe1[i ][:4, ...] for i in range(len(mspe1)) ]  #use scale: 1, 2, 3, 4 only
+    mspe1 = [ mspe1_[i].reshape(-1, mspe1_[i].shape[-1]) for i in range(len(mspe1_)) ] # reshape
+
+    mspe2_ = [ mspe2[i ][:4, ...] for i in range(len(mspe2)) ] #use scale: 1, 2, 3, 4 only
+    mspe2 = [ mspe2_[i].reshape(-1, mspe2_[i].shape[-1]) for i in range(len(mspe2_)) ] #reshape
+
+    if time == 2:
+        data_pe, data_stag = mspe1, stag1
+    elif time == 5:
+        data_pe, data_stag = mspe2, stag2
+    elif time == 'cat':
+        data_pe = mspe1 + mspe2
+        data_stag = stag1 + stag2
+
+elif setup == 'psd':
+    # SIMPLE GENERALIZATION BASED ON PSD
+    psd1, stag1, names1, freqs = load_single_append(path, fnames1, typ=setup)
+    psd2, stag2, names2, freqs = load_single_append(path, fnames2, typ=setup)
+    psd1, stag1 = select_class_to_classif(psd1, stag1, sel_idxs=sel_idxs)
+    psd2, stag2 = select_class_to_classif(psd2, stag2, sel_idxs=sel_idxs)
+
+    rel_psd1 = [psd1[i] / np.abs(np.sum(psd1[i], 0)) for i in range(len(psd1))]
+    rel_psd1 = [ np.log10(rel_psd1[i]) for i in range(len(psd1)) ]
+    rel_psd2 = [psd2[i] / np.abs(np.sum(psd2[i], 0)) for i in range(len(psd2))]
+    rel_psd2 = [ np.log10(rel_psd2[i]) for i in range(len(psd2)) ]
+    psd1 = rel_psd1
+    psd2 = rel_psd2
+    psd1 = [ psd1[i].reshape(-1, psd1[i].shape[-1]) for i in range(len(psd1)) ] # reshape
+    psd2 = [ psd2[i].reshape(-1, psd2[i].shape[-1]) for i in range(len(psd2)) ] #reshape
+
+    if time == 2:
+        data_pe, data_stag = psd1, stag1
+    elif time == 5:
+        data_pe, data_stag = psd2, stag2
+    elif time == 'cat':
+        data_pe = psd1 + psd2
+        data_stag = stag1 + stag2
+
+# Get actual scores
+f1, f1_indiv = classify_shuffle(data_pe, data_stag, myshow=False, check_mspe=True, null=False,
+                            n_folds=n_folds, search=True)
+#store_acc[setup].extend([acc])
+
+
+
+
+=======
 #store_perfs = {'s1':[], 's2': [], 's3': [], 's4': []}
 #store_perfs = {'mspet1m3' : [], 'psd' : []}
 #store_perfs = {'mspet1m3' : []}
@@ -39,7 +94,7 @@ store_perfs = []
 #for setup in ['mspet1m3', 'psd']:
 #for s in [1,2,3,4]: #taus
 #for i in range(2):
-s = 4 # use scales in range from 0 to s
+s = 5 #taus no
 
 mspe1, mspe_stag1, mspe_names1, _ = load_single_append(path, fnames1, typ='mspet1m3')
 mspe2, mspe_stag2, mspe_names2, _ = load_single_append(path, fnames2, typ='mspet1m3')
