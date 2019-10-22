@@ -156,7 +156,7 @@ print(np.asarray([perf[i][0] for i in range(len(perf))]).mean())
 
 # Save scores
 write_pickle(perf, 'psd_cat_searched_scores.txt')
-
+'''
 # Run classification on shuffled data (chance level)
 nulliter  = 100
 null_perfs = []
@@ -168,3 +168,4 @@ for idx in range(nulliter):
     null_perfs.append(perf_n)
 
 # Save chance scores
+'''
