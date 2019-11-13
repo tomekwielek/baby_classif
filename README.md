@@ -1,4 +1,4 @@
-﻿# Overview
+﻿
 
 We analyzed sample of newborn EEG data at week 2 and 5 after birth. There were two aims of the project:
 1.	Describing entropy & PSD changes with sleep states and age in newborns
@@ -6,7 +6,8 @@ We analyzed sample of newborn EEG data at week 2 and 5 after birth. There were t
 We observed developmental changes limited to “quiet” NREM and “active” REM sleep. Classification accuracy was of 60% at week-2, 73% at week-5 (while estimated chance level of  33%) using multi-scale permutation entropy (6 EEG and 5 physiological channels).
 
 ## References
-
+ https://doi.org/10.1371/journal.pone.0224521
+ 
 ## Year 
 2018
 
